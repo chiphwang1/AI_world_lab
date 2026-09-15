@@ -70,6 +70,6 @@ variable "node_count" {
 }
 variable "create_policies" {
   type        = bool
-  description = "Let the module create documented OKE IAM policies."
+  description = "Let the module create OKE IAM resources (policies, dynamic groups, and tags)."
   default     = true
 }

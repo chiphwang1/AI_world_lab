@@ -1,6 +1,6 @@
 module "oke" {
   source  = "oracle-terraform-modules/oke/oci"
-  version = "~> 5.0"
+  version = "5.5.1"
 
   providers = {
     oci      = oci
@@ -16,26 +16,27 @@ module "oke" {
   cluster_type            = "enhanced"
   control_plane_is_public = true
 
-  create_vcn              = true
-  vcn_cidrs               = [var.vcn_cidr]
-  pods_cidr               = var.pods_cidr
-  services_cidr           = var.services_cidr
-  cni_type                = "npn"
-  create_nat_gateway      = true
-  create_service_gateway  = true
-  create_internet_gateway = true
-  create_bastion          = false
-  create_operator         = false
+  create_vcn                  = true
+  vcn_cidrs                   = [var.vcn_cidr]
+  pods_cidr                   = var.pods_cidr
+  services_cidr               = var.services_cidr
+  cni_type                    = "npn"
+  vcn_create_nat_gateway      = "always"
+  vcn_create_service_gateway  = "always"
+  vcn_create_internet_gateway = "always"
+  create_bastion              = false
+  create_operator             = false
 
-  create_policies           = var.create_policies
-  workload_identity_enabled = true
+  create_iam_resources = var.create_policies
+  # Workload identity is an enhanced-cluster capability, not a module toggle.
 
-  node_pools = {
+  worker_pools = {
     workers = {
+      mode                    = "node-pool"
       shape                   = var.node_shape
       ocpus                   = var.node_ocpus
       memory                  = var.node_memory_gb
-      node_pool_size          = var.node_count
+      size                    = var.node_count
       boot_volume_vpus_per_gb = 10
     }
   }

@@ -10,7 +10,7 @@ output "vcn_id" {
 
 output "node_pool_ids" {
   description = "Worker pool OCIDs."
-  value       = module.oke.node_pool_ids
+  value       = module.oke.worker_pool_ids
 }
 
 output "kubeconfig_command" {
