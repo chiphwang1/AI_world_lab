@@ -48,10 +48,14 @@ Create a dedicated OCI automation user/API key with least-privilege policies. Ne
 
 ## Operating the pipeline
 
+CI uses the GitLab HTTP backend state `ospa2100-phoenix-oke-lab`, with locking and per-job token authentication supplied through environment variables. Plan and apply jobs are not interruptible. The plan job saves `lab.tfplan` and its provider lock file as maintainer-only artifacts; apply consumes that saved plan from the same pipeline. State must be retained until cleanup completes. Local Terraform use now requires HTTP backend credentials; do not switch back to local state for this environment.
+
+Deployment attempt [985964](https://gitlab.hap.demo.us-phoenix-1.oci.oraclecloud.com/luna-labs/ospa/oke-bootcamp/-/jobs/985964) initialized the backend but failed during planning because the OCI provider could not load a proper private-key configuration. No OCI resources were created by that job. Verify the protected `OCI_PRIVATE_KEY_B64` value contains the Base64-encoded complete OSPA2100 private PEM key before retrying; never print it in job logs.
+
 1. Push a branch or use **Build → Pipelines → Run pipeline**. The validation and security jobs run automatically.
 2. Review the `terraform:plan` job output on the protected `main` branch.
 3. Start `terraform:apply` only after reviewing the plan and expected cost.
 4. Deploy and validate the application from a suitably equipped runner or a trusted operator workstation.
 5. Start `terraform:destroy` after the lab. It removes billable lab infrastructure.
 
-`terraform:apply` and `terraform:destroy` use `-auto-approve` because the GitLab manual-job button is the approval gate. Do not change their rules to run automatically.
+`terraform:apply` executes the saved plan without another prompt; `terraform:destroy` uses `-auto-approve`. The GitLab manual-job button is the approval gate. Do not change their rules to run automatically.

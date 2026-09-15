@@ -59,7 +59,9 @@ shell:syntax:
   before_script:
     - bash scripts/ci-tools.sh terraform
     - umask 077
+    - test -n "$OCI_PRIVATE_KEY_B64" || { echo "OCI_PRIVATE_KEY_B64 is missing from this job"; exit 1; }
     - printf '%s' "$OCI_PRIVATE_KEY_B64" | base64 -d > /tmp/oke-api-key.pem
+    - test -s /tmp/oke-api-key.pem || { echo "Decoded OCI private key is empty"; exit 1; }
     - chmod 600 /tmp/oke-api-key.pem
     - export TF_VAR_private_key_path=/tmp/oke-api-key.pem
     - export TF_HTTP_ADDRESS="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/ospa2100-phoenix-oke-lab"
