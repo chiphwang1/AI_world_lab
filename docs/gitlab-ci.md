@@ -1,18 +1,28 @@
 # GitLab CI setup
 
-The pipeline automatically validates Terraform formatting and syntax, Kubernetes manifest rendering, shell syntax, SAST, and secret detection. It never creates OCI resources automatically.
+The pipeline runs Terraform formatting and validation, Kubernetes manifest rendering, ShellCheck, and an OCI CLI version check. GitLab security templates are also configured; their scanners require separately approved images. It never creates OCI resources automatically.
 
 `terraform:plan`, `terraform:apply`, and `terraform:destroy` appear only for the default branch and require a manual click. Limit access to these jobs with a protected `main` branch and protected environment.
 
 ## Runner requirements
 
+The tool jobs use `container-registry.oracle.com/os/oraclelinux:9`, which the Luna runner accepts. `scripts/ci-tools.sh` installs the tool needed by each disposable Linux x86-64 job: Terraform 1.9.8, kubectl 1.36.1, ShellCheck 0.11.0, or OCI CLI 3.78.0. These are pinned versions, not a promise to track the latest release. Terraform and kubectl downloads are checked against vendor SHA-256 checksum files. OCI CLI is isolated in a Python virtual environment. This does not modify the shared Luna base image or local workstation tools.
+
 Use a GitLab Runner with outbound access to:
 
 - GitLab, to fetch source and report results.
 - `registry.terraform.io`, to download Terraform providers and the OKE module.
+- `container-registry.oracle.com` and Oracle Linux package repositories, for the base image and packages.
+- `releases.hashicorp.com`, `dl.k8s.io`, GitHub release downloads (including redirect hosts), and PyPI/package download hosts, for the pinned tools and dependencies.
 - OCI APIs in the selected region, for the manual Terraform jobs.
 
 The runner does not need inbound internet access. Do not use a runner connected to a production network for this lab.
+
+## Toolchain test status
+
+Pipeline [398021](https://gitlab.hap.demo.us-phoenix-1.oci.oraclecloud.com/luna-labs/ospa/oke-bootcamp/-/pipelines/398021) verified the approved image and passed Terraform formatting, Kubernetes rendering, ShellCheck, and OCI CLI installation/version checks. Terraform initialization downloaded OKE module 5.5.1 but failed because the existing module call does not supply its required `oci.home` provider configuration. The infrastructure configuration needs repair and revalidation before deployment; this tool update does not claim a successful plan or deployment.
+
+The GitLab security templates retain their own analyzer images, so changing the default image does not resolve their runner allowlist restriction. An approved analyzer mirror or runner administrator change is still required. A skipped scanner is not a successful security scan.
 
 ## Protected, masked CI variables
 
