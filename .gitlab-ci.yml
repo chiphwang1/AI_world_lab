@@ -6,8 +6,90 @@
 # Note that environment variables can be set in several places
 # See https://docs.gitlab.com/ci/variables/#cicd-variable-precedence
 stages:
+- validate
 - test
 - secret-detection
+- plan
+- deploy
+- cleanup
+
+default:
+  interruptible: true
+
+# Non-secret test target. OCI credentials stay in protected CI/CD variables.
+variables:
+  TF_VAR_region: "us-ashburn-1"
+  TF_VAR_compartment_ocid: "ocid1.compartment.oc1..aaaaaaaa2ijdf6t2lws2v7l7zueg6a2a24jwvb2f4upe4zop63etp2wcnxna"
+  TF_VAR_kubernetes_version: "v1.36.1"
+
+terraform:format:
+  stage: validate
+  image:
+    name: hashicorp/terraform:1.9.8
+    entrypoint: [""]
+  script:
+    - terraform -chdir=terraform fmt -check -recursive
+
+terraform:validate:
+  stage: validate
+  image:
+    name: hashicorp/terraform:1.9.8
+    entrypoint: [""]
+  script:
+    - terraform -chdir=terraform init -backend=false
+    - terraform -chdir=terraform validate
+
+kubernetes:render:
+  stage: validate
+  image: bitnami/kubectl:1.32.0
+  script:
+    - kubectl kustomize kubernetes
+
+shell:syntax:
+  stage: validate
+  image: koalaman/shellcheck-alpine:v0.10.0
+  script:
+    - shellcheck scripts/validate-lab.sh
+
+# These cloud-changing jobs are deliberately manual. Configure the protected,
+# masked variables listed in docs/gitlab-ci.md before using them.
+.oci_terraform:
+  image:
+    name: hashicorp/terraform:1.9.8
+    entrypoint: [""]
+  before_script:
+    - umask 077
+    - printf '%s' "$OCI_PRIVATE_KEY" > "$CI_PROJECT_DIR/oci_api_key.pem"
+    - export TF_VAR_private_key_path="$CI_PROJECT_DIR/oci_api_key.pem"
+    - terraform -chdir=terraform init
+  resource_group: oke-lab-test
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+      allow_failure: false
+
+terraform:plan:
+  extends: .oci_terraform
+  stage: plan
+  script:
+    - terraform -chdir=terraform plan
+
+terraform:apply:
+  extends: .oci_terraform
+  stage: deploy
+  script:
+    - terraform -chdir=terraform apply -auto-approve
+  environment:
+    name: oke-lab-test
+
+terraform:destroy:
+  extends: .oci_terraform
+  stage: cleanup
+  script:
+    - terraform -chdir=terraform destroy -auto-approve
+  environment:
+    name: oke-lab-test
+    action: stop
 sast:
   stage: test
 include:

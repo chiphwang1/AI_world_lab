@@ -31,7 +31,7 @@ variable "cluster_name" {
 variable "kubernetes_version" {
   type        = string
   description = "An OKE-supported version for the selected region."
-  default     = "v1.32.1"
+  default     = "v1.36.1"
 }
 variable "vcn_cidr" {
   type        = string
