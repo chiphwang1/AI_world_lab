@@ -23,12 +23,12 @@ In **Settings → CI/CD → Variables**, add these variables as protected and ma
 | `TF_VAR_tenancy_ocid` | Test tenancy OCID |
 | `TF_VAR_user_ocid` | Terraform service user's OCID |
 | `TF_VAR_fingerprint` | API key fingerprint |
-| `OCI_PRIVATE_KEY` | Entire PEM private key, stored as a protected **File** variable |
+| `OCI_PRIVATE_KEY_B64` | Base64 encoding of the entire PEM private key |
 | `TF_VAR_region` | Target OCI region |
 | `TF_VAR_compartment_ocid` | Dedicated lab compartment OCID |
 | `TF_VAR_kubernetes_version` | A version currently supported in the target region |
 
-The repository has non-secret defaults for the approved lab target: `us-ashburn-1`, the active `cks-pm-team` compartment, and OKE `v1.36.1` (verified on 2026-09-15). CI/CD variables take precedence if you need a different test target.
+Use **Masked and hidden** visibility for `OCI_PRIVATE_KEY_B64`, and do not enable variable expansion. The job decodes it into a `0600` PEM file only for the duration of the job. The target region, compartment, and Kubernetes version are deliberately not stored in the repository; configure all three as protected variables for the selected tenancy. For OSPA2100, the selected region is `us-phoenix-1`; choose a dedicated OSPA2100 compartment before running a plan or deployment.
 
 Create a dedicated OCI automation user/API key with least-privilege policies. Never store the PEM key, `terraform.tfvars`, Terraform state, or a tenancy credential in the repository.
 

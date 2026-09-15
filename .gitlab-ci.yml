@@ -16,11 +16,9 @@ stages:
 default:
   interruptible: true
 
-# Non-secret test target. OCI credentials stay in protected CI/CD variables.
-variables:
-  TF_VAR_region: "us-ashburn-1"
-  TF_VAR_compartment_ocid: "ocid1.compartment.oc1..aaaaaaaa2ijdf6t2lws2v7l7zueg6a2a24jwvb2f4upe4zop63etp2wcnxna"
-  TF_VAR_kubernetes_version: "v1.36.1"
+# OCI credentials and the deployment target are supplied only through
+# protected CI/CD variables. This prevents a credential change from retaining
+# a target compartment belonging to a different tenancy.
 
 terraform:format:
   stage: validate
@@ -59,7 +57,7 @@ shell:syntax:
     entrypoint: [""]
   before_script:
     - umask 077
-    - cp "$OCI_PRIVATE_KEY" "$CI_PROJECT_DIR/oci_api_key.pem"
+    - printf '%s' "$OCI_PRIVATE_KEY_B64" | base64 -d > "$CI_PROJECT_DIR/oci_api_key.pem"
     - chmod 600 "$CI_PROJECT_DIR/oci_api_key.pem"
     - export TF_VAR_private_key_path="$CI_PROJECT_DIR/oci_api_key.pem"
     - terraform -chdir=terraform init
