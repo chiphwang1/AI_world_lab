@@ -2,6 +2,11 @@ module "oke" {
   source  = "oracle-terraform-modules/oke/oci"
   version = "~> 5.0"
 
+  providers = {
+    oci      = oci
+    oci.home = oci.home
+  }
+
   tenancy_id     = var.tenancy_ocid
   compartment_id = var.compartment_ocid
   region         = var.region

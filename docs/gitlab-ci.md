@@ -26,6 +26,8 @@ The GitLab security templates retain their own analyzer images, so changing the 
 
 ## Protected, masked CI variables
 
+The default OCI provider uses `TF_VAR_region` for the cluster. The separate `oci.home` provider discovers the tenancy's home region from OCI region subscriptions and is explicitly passed to the OKE module for home-region operations. No additional home-region secret is required; the automation identity must be able to read its tenancy's region subscriptions. Validation does not query OCI; this lookup occurs during a plan or apply.
+
 In **Settings → CI/CD → Variables**, add these variables as protected and masked where GitLab permits masking:
 
 | Variable | Value |
