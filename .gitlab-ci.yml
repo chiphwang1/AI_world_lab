@@ -55,13 +55,20 @@ shell:syntax:
 # These cloud-changing jobs are deliberately manual. Configure the protected,
 # masked variables listed in docs/gitlab-ci.md before using them.
 .oci_terraform:
+  interruptible: false
   before_script:
     - bash scripts/ci-tools.sh terraform
     - umask 077
-    - printf '%s' "$OCI_PRIVATE_KEY_B64" | base64 -d > "$CI_PROJECT_DIR/oci_api_key.pem"
-    - chmod 600 "$CI_PROJECT_DIR/oci_api_key.pem"
-    - export TF_VAR_private_key_path="$CI_PROJECT_DIR/oci_api_key.pem"
-    - terraform -chdir=terraform init
+    - printf '%s' "$OCI_PRIVATE_KEY_B64" | base64 -d > /tmp/oke-api-key.pem
+    - chmod 600 /tmp/oke-api-key.pem
+    - export TF_VAR_private_key_path=/tmp/oke-api-key.pem
+    - export TF_HTTP_ADDRESS="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/ospa2100-phoenix-oke-lab"
+    - export TF_HTTP_LOCK_ADDRESS="${TF_HTTP_ADDRESS}/lock"
+    - export TF_HTTP_UNLOCK_ADDRESS="${TF_HTTP_ADDRESS}/lock"
+    - export TF_HTTP_USERNAME=gitlab-ci-token
+    - export TF_HTTP_PASSWORD="$CI_JOB_TOKEN"
+    - export TF_HTTP_LOCK_METHOD=POST TF_HTTP_UNLOCK_METHOD=DELETE TF_HTTP_RETRY_WAIT_MIN=5
+    - terraform -chdir=terraform init -input=false
   resource_group: oke-lab-test
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
@@ -72,13 +79,21 @@ terraform:plan:
   extends: .oci_terraform
   stage: plan
   script:
-    - terraform -chdir=terraform plan
+    - terraform -chdir=terraform plan -input=false -out=lab.tfplan
+  artifacts:
+    access: maintainer
+    expire_in: 1 day
+    paths:
+      - terraform/lab.tfplan
+      - terraform/.terraform.lock.hcl
 
 terraform:apply:
   extends: .oci_terraform
   stage: deploy
+  dependencies:
+    - terraform:plan
   script:
-    - terraform -chdir=terraform apply -auto-approve
+    - terraform -chdir=terraform apply -input=false lab.tfplan
   environment:
     name: oke-lab-test
 
