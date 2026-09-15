@@ -23,7 +23,7 @@ In **Settings → CI/CD → Variables**, add these variables as protected and ma
 | `TF_VAR_tenancy_ocid` | Test tenancy OCID |
 | `TF_VAR_user_ocid` | Terraform service user's OCID |
 | `TF_VAR_fingerprint` | API key fingerprint |
-| `OCI_PRIVATE_KEY` | Entire PEM private-key content |
+| `OCI_PRIVATE_KEY` | Entire PEM private key, stored as a protected **File** variable |
 | `TF_VAR_region` | Target OCI region |
 | `TF_VAR_compartment_ocid` | Dedicated lab compartment OCID |
 | `TF_VAR_kubernetes_version` | A version currently supported in the target region |

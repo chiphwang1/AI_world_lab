@@ -59,7 +59,8 @@ shell:syntax:
     entrypoint: [""]
   before_script:
     - umask 077
-    - printf '%s' "$OCI_PRIVATE_KEY" > "$CI_PROJECT_DIR/oci_api_key.pem"
+    - cp "$OCI_PRIVATE_KEY" "$CI_PROJECT_DIR/oci_api_key.pem"
+    - chmod 600 "$CI_PROJECT_DIR/oci_api_key.pem"
     - export TF_VAR_private_key_path="$CI_PROJECT_DIR/oci_api_key.pem"
     - terraform -chdir=terraform init
   resource_group: oke-lab-test
