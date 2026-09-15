@@ -20,7 +20,9 @@ The runner does not need inbound internet access. Do not use a runner connected 
 
 ## Toolchain test status
 
-Pipeline [398021](https://gitlab.hap.demo.us-phoenix-1.oci.oraclecloud.com/luna-labs/ospa/oke-bootcamp/-/pipelines/398021) verified the approved image and passed Terraform formatting, Kubernetes rendering, ShellCheck, and OCI CLI installation/version checks. Terraform initialization downloaded OKE module 5.5.1 but failed because the existing module call does not supply its required `oci.home` provider configuration. The infrastructure configuration needs repair and revalidation before deployment; this tool update does not claim a successful plan or deployment.
+Pipeline [398025](https://gitlab.hap.demo.us-phoenix-1.oci.oraclecloud.com/luna-labs/ospa/oke-bootcamp/-/pipelines/398025) passed Terraform initialization and validation after the `oci.home` provider and OKE module interface fixes. Formatting, Kubernetes rendering, and ShellCheck also passed. This is static configuration validation, not a successful OCI plan or deployment.
+
+The OKE module is pinned to 5.5.1. Gateway inputs use `vcn_create_*_gateway = "always"`; managed nodes use `worker_pools` with `mode = "node-pool"` and `size`. The public `node_pool_ids` output is retained but reads the module's `worker_pool_ids`. The existing `create_policies` switch maps to `create_iam_resources`, which controls policies, dynamic groups, and tags. The unsupported workload-identity toggle was removed; the cluster remains enhanced. Review actual IAM and infrastructure changes in a plan before applying.
 
 The GitLab security templates retain their own analyzer images, so changing the default image does not resolve their runner allowlist restriction. An approved analyzer mirror or runner administrator change is still required. A skipped scanner is not a successful security scan.
 
