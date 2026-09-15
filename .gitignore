@@ -8,3 +8,7 @@ terraform/*.tfplan
 
 # Keep the documented example configuration tracked.
 !terraform/terraform.tfvars.example
+
+# Dedicated local credential for this GitLab project (never commit).
+.gitlab_oke_bootcamp_ed25519
+.gitlab_oke_bootcamp_ed25519.pub
