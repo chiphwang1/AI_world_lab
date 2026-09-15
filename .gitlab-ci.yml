@@ -15,6 +15,9 @@ stages:
 
 default:
   interruptible: true
+  image:
+    name: container-registry.oracle.com/os/oraclelinux:9
+    entrypoint: [""]
 
 # OCI credentials and the deployment target are supplied only through
 # protected CI/CD variables. This prevents a credential change from retaining
@@ -22,40 +25,38 @@ default:
 
 terraform:format:
   stage: validate
-  image:
-    name: hashicorp/terraform:1.9.8
-    entrypoint: [""]
+  before_script:
+    - bash scripts/ci-tools.sh terraform
   script:
     - terraform -chdir=terraform fmt -check -recursive
 
 terraform:validate:
   stage: validate
-  image:
-    name: hashicorp/terraform:1.9.8
-    entrypoint: [""]
+  before_script:
+    - bash scripts/ci-tools.sh terraform
   script:
     - terraform -chdir=terraform init -backend=false
     - terraform -chdir=terraform validate
 
 kubernetes:render:
   stage: validate
-  image: bitnami/kubectl:1.32.0
+  before_script:
+    - bash scripts/ci-tools.sh kubectl
   script:
     - kubectl kustomize kubernetes
 
 shell:syntax:
   stage: validate
-  image: koalaman/shellcheck-alpine:v0.10.0
+  before_script:
+    - bash scripts/ci-tools.sh shellcheck
   script:
-    - shellcheck scripts/validate-lab.sh
+    - shellcheck scripts/validate-lab.sh scripts/ci-tools.sh
 
 # These cloud-changing jobs are deliberately manual. Configure the protected,
 # masked variables listed in docs/gitlab-ci.md before using them.
 .oci_terraform:
-  image:
-    name: hashicorp/terraform:1.9.8
-    entrypoint: [""]
   before_script:
+    - bash scripts/ci-tools.sh terraform
     - umask 077
     - printf '%s' "$OCI_PRIVATE_KEY_B64" | base64 -d > "$CI_PROJECT_DIR/oci_api_key.pem"
     - chmod 600 "$CI_PROJECT_DIR/oci_api_key.pem"
@@ -98,3 +99,10 @@ variables:
   SECRET_DETECTION_ENABLED: 'true'
 secret_detection:
   stage: secret-detection
+
+oci:version:
+  stage: validate
+  before_script:
+    - bash scripts/ci-tools.sh oci
+  script:
+    - oci --version
