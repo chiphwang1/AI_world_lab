@@ -62,6 +62,8 @@ With 50 concurrent sessions, the defaults imply up to 50 clusters and 100 worker
 
 The default OCI provider uses `TF_VAR_region` for the cluster. The separate `oci.home` provider discovers the tenancy's home region from OCI region subscriptions and is explicitly passed to the OKE module for home-region operations. No additional home-region secret is required; the automation identity must be able to read its tenancy's region subscriptions. Validation does not query OCI; this lookup occurs during a plan or apply.
 
+Managed worker pools set the OKE node metadata field `areLegacyImdsEndpointsDisabled` to `true`. This is the managed-node-pool API setting that disables IMDSv1; the module's similarly named `worker_legacy_imds_endpoints_disabled` input only reaches self-managed compute resources in the pinned module version.
+
 In **Settings → CI/CD → Variables**, add these variables as protected and masked where GitLab permits masking:
 
 | Variable | Value |
