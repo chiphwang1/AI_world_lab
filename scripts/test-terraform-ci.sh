@@ -144,6 +144,22 @@ unset CI_DEBUG_TRACE
 
 # Luna state follows the recorded launch pipeline, not a pooled compartment.
 export LUNA_DEPLOYMENT=1 CI_COMMIT_BRANCH=main CI_DEFAULT_BRANCH=main CI_COMMIT_REF_PROTECTED=true
+export CI_PIPELINE_ID=499
+OCI_PRIVATE_KEY_B64=$(base64 < test-key.pem)
+export OCI_PRIVATE_KEY_B64
+unset TF_VAR_private_key
+for test_action in plan apply destroy; do
+  failure 'Luna requires TF_VAR_private_key' "$test_action"
+done
+export TF_VAR_private_key='not a PEM key'
+# A valid legacy key must not rescue an invalid Luna key.
+failure 'not a valid unencrypted PEM' plan
+failure 'not a valid unencrypted PEM' apply
+failure 'not a valid unencrypted PEM' destroy
+TF_VAR_private_key=$(cat test-key.pem)
+# Keep a conflicting, invalid legacy value through plan, apply, and destroy.
+# The mock Terraform verifies it receives the Luna key and neither raw secret.
+export OCI_PRIVATE_KEY_B64='ignored invalid legacy credential'
 unset CI_PIPELINE_ID
 failure 'Luna requires CI_PIPELINE_ID'
 export CI_PIPELINE_ID=500 CI_COMMIT_REF_PROTECTED=false
@@ -193,7 +209,7 @@ if grep -q 'destroy -input=false' "$TEST_CALLS"; then
 fi
 [[ ! -e /tmp/oke-api-key.pem ]]
 export TEST_STATE_JSON='{}'
-unset LUNA_DEPLOYMENT
+unset LUNA_DEPLOYMENT OCI_PRIVATE_KEY_B64
 # Terraform errors must also remove the materialized key.
 export TEST_TF_FAIL=true
 if bash "$bootstrap" plan > result.log 2>&1; then

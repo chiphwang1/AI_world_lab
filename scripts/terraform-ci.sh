@@ -21,7 +21,12 @@ for name in CI_API_V4_URL CI_PROJECT_ID CI_JOB_TOKEN TF_VAR_tenancy_ocid TF_VAR_
   [[ -n ${!name:-} ]] || fail "$name is missing from this job."
 done
 
-if [[ -n ${TF_VAR_private_key:-} && -n ${OCI_PRIVATE_KEY_B64:-} ]]; then
+if [[ ${LUNA_DEPLOYMENT:-0} == 1 ]]; then
+  # Never use an inherited long-lived key with Luna's temporary identity.
+  [[ -n ${TF_VAR_private_key:-} ]] || fail "Luna requires TF_VAR_private_key; legacy credentials cannot be used for a Luna session."
+  credential_source=luna
+  unset OCI_PRIVATE_KEY_B64
+elif [[ -n ${TF_VAR_private_key:-} && -n ${OCI_PRIVATE_KEY_B64:-} ]]; then
   fail "Both TF_VAR_private_key and OCI_PRIVATE_KEY_B64 are set. Supply exactly one credential source."
 elif [[ -n ${TF_VAR_private_key:-} ]]; then
   credential_source=luna
