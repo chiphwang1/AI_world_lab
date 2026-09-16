@@ -49,7 +49,7 @@ class RulesTests(unittest.TestCase):
         for name in ("terraform:plan", "terraform:apply"):
             rule = self.matched_rule(name, variables)
             self.assertEqual(rule["when"], "on_success")
-            self.assertEqual(rule["variables"]["OKE_RESOURCE_GROUP"], "luna-oke-$CI_PIPELINE_ID")
+        self.assertNotIn("resource_group", self.config[".oci_terraform"])
         rule = self.matched_rule("terraform:destroy", variables)
         self.assertEqual(rule["when"], "manual")
         self.assertTrue(rule["allow_failure"])

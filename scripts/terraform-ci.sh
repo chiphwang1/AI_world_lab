@@ -63,8 +63,8 @@ export TF_HTTP_LOCK_METHOD=POST TF_HTTP_UNLOCK_METHOD=DELETE TF_HTTP_RETRY_WAIT_
 export TF_INPUT=0 TF_IN_AUTOMATION=true
 
 # Cleanup is independently playable after a provisioning failure. A companion
-# HTTP state records session closure under the same CI resource-group lock.
-# This prevents a queued/retried plan or apply from provisioning after cleanup.
+# HTTP state records session closure so queued/retried provisioning skips a
+# session whose cleanup has already started.
 if [[ ${LUNA_DEPLOYMENT:-0} == 1 ]]; then
   marker_address="${TF_HTTP_ADDRESS}-closed"
   marker_curl=(curl --silent --show-error --connect-timeout 10 --max-time 60
