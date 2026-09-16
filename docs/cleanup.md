@@ -1,5 +1,20 @@
 # Cleanup
 
+## Luna session cleanup
+
+Luna starts `terraform:destroy`, the only manual job in a Luna pipeline, when the session ends/expires. The job is independently runnable after failed provisioning and does not download plan artifacts. It uses the recorded launch pipeline's `luna-oke-<pipeline-id>` remote state and credentials, marks the session closed to prevent later provisioning, and performs these steps:
+
+1. Read the managed cluster ID from Terraform state, including after a partial apply without outputs. Refuse ambiguous clusters or mismatched deployment targets.
+2. Confirm the cluster still exists through an authenticated OCI compartment listing. Empty state and already-deleted clusters skip Kubernetes cleanup; lookup errors stop the job.
+3. Create a temporary kubeconfig using the session API key. Delete all `LoadBalancer` Services in the session-owned cluster, including learner-created Services, and wait up to ten minutes per Service for deletion/finalizers. Then delete the repository's Kubernetes manifests.
+4. Run Terraform destroy only after Kubernetes cleanup succeeds. Retain remote state and the session-closed marker for retries/audit.
+
+An inaccessible Kubernetes API or stuck finalizer stops cleanup before Terraform tears down the cluster/network. Resolve the cause and retry the cleanup job in the same pipeline. Do not force-remove cloud-controller finalizers as a substitute for deleting their OCI resources. Because cleanup is an optional manual job, its failure may leave the overall pipeline showing a warning; inspect `terraform:destroy` itself.
+
+Terraform only manages resources recorded in its state. The Service cleanup covers Kubernetes-created OCI load balancers; it does not sweep arbitrary learner-created OCI resources, persistent volumes, or other controllers' external resources. Define those activities and their cleanup explicitly before a workshop. Luna's removal of learner access is not a substitute for successful infrastructure cleanup.
+
+## Local cleanup
+
 Delete Kubernetes objects first; this gives the cloud controller time to remove the OCI Load Balancer:
 
 ```bash

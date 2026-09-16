@@ -13,6 +13,15 @@ output "node_pool_ids" {
   value       = module.oke.worker_pool_ids
 }
 
+output "deployment_target" {
+  description = "Non-secret target identity used to verify session cleanup."
+  value = {
+    tenancy_ocid     = var.tenancy_ocid
+    compartment_ocid = var.compartment_ocid
+    region           = var.region
+  }
+}
+
 output "kubeconfig_command" {
   description = "Run this command to configure kubectl."
   value       = "oci ce cluster create-kubeconfig --cluster-id ${module.oke.cluster_id} --region ${var.region} --token-version 2.0.0 --kubeconfig-file $HOME/.kube/config --overwrite"

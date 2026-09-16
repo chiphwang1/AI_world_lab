@@ -1,8 +1,8 @@
 # GitLab CI setup
 
-The pipeline runs Terraform formatting and validation, Kubernetes manifest rendering, ShellCheck, credential-bootstrap tests with mock Terraform, and an OCI CLI version check. GitLab security templates are also configured; their scanners require separately approved images. It never creates OCI resources automatically.
+The pipeline runs Terraform formatting and validation, Kubernetes manifest rendering, ShellCheck, mocked credential/lifecycle tests, and an OCI CLI version check. GitLab security templates are also configured; their scanners require separately approved images.
 
-`terraform:plan`, `terraform:apply`, and `terraform:destroy` appear only for the default branch and require a manual click. Limit access to these jobs with a protected `main` branch and protected environment.
+For `LUNA_DEPLOYMENT=1` on the protected default branch, plan and apply run automatically. The only manual job is cleanup, which Luna starts at session end. Other default-branch pipelines retain manual plan/apply/destroy. Luna jobs are excluded from unprotected branches and non-default branches. Protect `main` and restrict pipeline-trigger/variable permissions: the Luna flag selects behavior and is not an authentication mechanism. If environments are protected, authorize the Luna automation identity for `luna/*` without a deployment-approval requirement; otherwise GitLab can still block automatic deployment.
 
 ## Runner requirements
 
@@ -16,7 +16,8 @@ Use a GitLab Runner with outbound access to:
 - `registry.terraform.io`, to download Terraform providers and the OKE module.
 - `container-registry.oracle.com` and Oracle Linux package repositories, for the base image and packages.
 - `releases.hashicorp.com`, `dl.k8s.io`, GitHub release downloads (including redirect hosts), and PyPI/package download hosts, for the pinned tools and dependencies.
-- OCI APIs in the selected region, for the manual Terraform jobs.
+- OCI APIs in the selected region, for Terraform and cleanup.
+- The OKE public Kubernetes API endpoint, for Service and application cleanup.
 
 The runner does not need inbound internet access. Do not use a runner connected to a production network for this lab.
 
@@ -24,7 +25,7 @@ The runner does not need inbound internet access. Do not use a runner connected 
 
 Pipeline [398025](https://gitlab.hap.demo.us-phoenix-1.oci.oraclecloud.com/luna-labs/ospa/oke-bootcamp/-/pipelines/398025) passed Terraform initialization and validation after the `oci.home` provider and OKE module interface fixes. Formatting, Kubernetes rendering, and ShellCheck also passed. This is static configuration validation, not a successful OCI plan or deployment.
 
-The OKE module is pinned to 5.5.1. Gateway inputs use `vcn_create_*_gateway = "always"`; managed nodes use `worker_pools` with `mode = "node-pool"` and `size`. The public `node_pool_ids` output is retained but reads the module's `worker_pool_ids`. The existing `create_policies` switch maps to `create_iam_resources`, which controls policies, dynamic groups, and tags. The unsupported workload-identity toggle was removed; the cluster remains enhanced. Review actual IAM and infrastructure changes in a plan before applying.
+The OKE module is pinned to 5.5.1. Gateway inputs use `vcn_create_*_gateway = "always"`; managed nodes use `worker_pools` with `mode = "node-pool"` and `size`. The public `node_pool_ids` output is retained but reads the module's `worker_pool_ids`. The existing `create_policies` switch maps to `create_iam_resources`, which controls policies, dynamic groups, and tags. The cluster remains enhanced. Review a representative plan and quota/cost requirements before enabling the lab for learners; Luna applies its saved plan automatically.
 
 The GitLab security templates retain their own analyzer images, so changing the default image does not resolve their runner allowlist restriction. An approved analyzer mirror or runner administrator change is still required. A skipped scanner is not a successful security scan.
 
@@ -32,7 +33,7 @@ The GitLab security templates retain their own analyzer images, so changing the 
 
 The [Luna ADB example](https://gitlab.hap.demo.us-phoenix-1.oci.oraclecloud.com/luna-labs/ospa/pipeline-examples/create-and-manipulate-adb-example-pipeline/-/blob/main/.gitlab-ci.yml) documents runtime injection of OCI API-key credentials by the Shared Platform. This repository accepts that interface; it does not require authors to download an OCI private key. Terraform still authenticates with the supplied API key.
 
-Configure the Luna lab to use this GitLab project and its protected default branch, then enable **Provision resources through the Shared Platform** in the lab's Oracle Cloud settings. A trusted launch must supply these variables together:
+Configure a private Luna lab with GitLab Content enabled, select this project and its protected default branch, then enable **Provision resources through the Shared Platform** in the lab's Oracle Cloud settings. A trusted launch must supply `LUNA_DEPLOYMENT=1` and these variables together:
 
 | Luna variable | Meaning |
 |---|---|
@@ -47,9 +48,15 @@ Also supply `TF_VAR_kubernetes_version` with an OKE-supported version for the al
 
 Remove a project/group `OCI_PRIVATE_KEY_B64` variable from the Luna job's scope before using injection. The bootstrap rejects jobs containing both raw and Base64 keys, rather than silently choosing one. Disable CI debug tracing and never print environment variables. Ensure the launch overrides any old project/group identity and target variables as a complete set. Restrict who can trigger pipelines or change these values, and keep secrets out of job artifacts.
 
-The documented example is from 2021: verify the current Luna launch actually supplies this interface and that its identity can create OKE, networking, and worker resources. It must also read tenancy region subscriptions and, when `create_policies = true`, create the module's IAM resources. If Luna restricts IAM creation, administrators must provision the required IAM resources before setting `TF_VAR_create_policies=false`.
+The documented example is from 2021. The session lifecycle follows the Luna guidance provided for this project: Luna starts the selected branch at session launch, records that pipeline, then starts every manual job in that same pipeline at session termination/expiry with the session variables restored (except `TF_VAR_tims_idcs_access_token`). These platform callbacks still need an end-to-end test. The pipeline does not use that excluded token. Other Luna tokens/passwords are not printed or added to artifacts.
 
-Plan, apply, and destroy remain manual on the default branch. A Luna-triggered pipeline therefore waits for operator approval; this is not unattended lab provisioning. Do not enable the lab for unattended participants until its launch/timeout behavior has been verified with these approval gates.
+Verify the session identity can create OKE, networking, and workers, read tenancy region subscriptions, list clusters in the session compartment, generate kubeconfig/tokens, and list/delete Kubernetes Services and the lab manifests. When `create_policies=true`, it must also create the module's IAM resources. If Luna restricts IAM creation, administrators must provision the required IAM resources before setting `TF_VAR_create_policies=false`.
+
+At launch, validation is followed by automatic plan and apply. The desktop may become available before the cluster is ready. `terraform:destroy` is optional/manual (`allow_failure: true`), so its waiting state does not block provisioning completion. Luna starts it when the session ends. Never add manual provisioning jobs to a Luna pipeline: the platform would also start them during teardown. Cleanup failures show as warnings because the job is optional; monitor the job itself and retry failures before credentials expire.
+
+Cleanup has no job/artifact dependencies and is playable even after failed or partial provisioning. It first writes a small `luna-oke-<pipeline-id>-closed` companion state through the authenticated GitLab HTTP backend. Plan and apply check this marker and skip provisioning once the session has closed. The same session resource-group lock serializes these operations, so early termination cannot be followed by a queued apply recreating the cluster. Marker read/write errors fail the job; retain the marker after cleanup and start a new Luna session to provision again. No Terraform state is stored as a normal job artifact.
+
+With 50 concurrent sessions, the defaults imply up to 50 clusters and 100 worker nodes, plus each cluster's VCN, gateways, volumes, and any learner-created load balancers. Check tenancy quotas, regional shape capacity, runner concurrency, and lab duration. Session-specific locks allow different labs to run concurrently; they do not reserve OCI capacity.
 
 ## Protected, masked CI variables (direct GitLab use)
 
@@ -75,17 +82,20 @@ Create a dedicated OCI automation user/API key with least-privilege policies. Ne
 
 CI uses the GitLab HTTP backend, with locking and per-job token authentication supplied through environment variables. State selection is:
 
-- An explicit `TF_STATE_NAME` selects an existing or deliberately named state; only letters, digits, underscores, and hyphens are accepted.
-- Base64-key jobs default to the existing `ospa2100-phoenix-oke-lab` state, preserving the original deployment.
-- Luna raw-key jobs default to `luna-oke-<sha256>`, hashing the tenancy OCID, compartment OCID, and region, each followed by a newline. This supports one OKE deployment per project/tenancy/compartment/region. Retries and cleanup use the same state; different allocated compartments use different states. For multiple independent clusters in the same compartment/region, supply distinct stable `TF_STATE_NAME` values.
+- Luna jobs use `luna-oke-${CI_PIPELINE_ID}`, scoped by GitLab project. Cleanup and retries in the recorded launch pipeline resolve the identical state. Different sessions get different state even when Luna reuses a compartment. The cluster name is `oke-luna-${CI_PIPELINE_ID}`. A conflicting `TF_STATE_NAME` is rejected, preventing a project-wide override from merging learner states.
+- For non-Luna jobs, explicit `TF_STATE_NAME` selects an existing state; only letters, digits, underscores, and hyphens are accepted.
+- Non-Luna Base64-key jobs still default to `ospa2100-phoenix-oke-lab`, preserving the original deployment.
+- Non-Luna raw-key jobs retain the earlier `luna-oke-<sha256>` default, hashing tenancy OCID, compartment OCID, and region (each followed by a newline). This compatibility path is for existing deployments, not new Luna sessions.
 
-When switching an **existing deployment** to Luna credentials, explicitly set `TF_STATE_NAME` to its existing state name (for the original deployment, `ospa2100-phoenix-oke-lab`) and keep the original target. Changing credentials must not move existing infrastructure to an empty state. Never point a newly allocated lab at another lab's state. No state migration or deletion is performed by this update.
+Do not adopt an **existing deployment** through a new Luna launch. Manage/recover it using a non-Luna manual pipeline with `TF_STATE_NAME` explicitly set to its existing state and the original target. This also applies to sessions created before this change using the compartment hash. For recovery of a current session from a new pipeline, use its original `luna-oke-<launch-pipeline-id>` state name, set `TF_VAR_cluster_name=oke-luna-<launch-pipeline-id>`, and use matching target credentials. Set `OKE_RESOURCE_GROUP=luna-oke-<launch-pipeline-id>` and `OKE_ENVIRONMENT=luna/oke-<launch-pipeline-id>` if the original pipeline could still be active. Prefer retrying cleanup in the original launch pipeline, which preserves the closure guard. No existing state is migrated or deleted by this change.
 
-Plan and apply jobs are not interruptible. The plan job saves `lab.tfplan`, `lab.target` (backend/target/identity metadata, without private keys), and its provider lock file as maintainer-only artifacts. Apply consumes the saved plan from the same pipeline and refuses changed backend, target, user, or fingerprint values before initialization. Changing those inputs requires a new reviewed plan. All infrastructure jobs retain the shared `oke-lab-test` resource group, serializing jobs across lab targets as well as using backend locks.
+Plan and apply jobs are not interruptible. The plan job saves `lab.tfplan`, `lab.target` (backend/target/identity metadata, without private keys), and its provider lock file as maintainer-only artifacts. Apply consumes the saved plan from the same pipeline and refuses changed backend, target, user, or fingerprint values before initialization. Changing those inputs requires a new plan. Cleanup downloads no artifacts, so it remains independent of their one-day expiry. All jobs for one Luna session share `luna-oke-${CI_PIPELINE_ID}` as their resource group and `luna/oke-${CI_PIPELINE_ID}` as their environment. Ordinary jobs retain `oke-lab-test`. Terraform also locks each backend state.
 
-State must be retained until cleanup completes. Destroy requires credentials for the original tenancy/compartment/region and the same state selection, even in a later pipeline. Keep that access available until cleanup; expired Luna credentials may require platform assistance. Local Terraform use requires HTTP backend credentials; do not switch back to local state for this environment.
+State must be retained until cleanup completes. Destroy requires credentials for the original tenancy/compartment/region. Keep that access available until cleanup; expired Luna credentials may require platform assistance. Local Terraform use requires HTTP backend credentials; do not switch back to local state for this environment. See [cleanup](cleanup.md) for Kubernetes finalizers and resources created outside Terraform.
 
 Deployment attempt [985964](https://gitlab.hap.demo.us-phoenix-1.oci.oraclecloud.com/luna-labs/ospa/oke-bootcamp/-/jobs/985964) initialized the backend but failed during planning because the OCI provider could not load a proper private-key configuration. No OCI resources were created by that job. The new bootstrap validates either credential input before initialization, but only an authorized live plan can verify OCI authentication and IAM permissions.
+
+For ordinary, non-Luna runs:
 
 1. Push a branch or use **Build → Pipelines → Run pipeline**. The validation and security jobs run automatically.
 2. Review the `terraform:plan` job output on the protected `main` branch.
@@ -93,6 +103,6 @@ Deployment attempt [985964](https://gitlab.hap.demo.us-phoenix-1.oci.oraclecloud
 4. Deploy and validate the application from a suitably equipped runner or a trusted operator workstation.
 5. Start `terraform:destroy` after the lab. It removes billable lab infrastructure.
 
-`terraform:apply` executes the saved plan without another prompt; `terraform:destroy` uses `-auto-approve`. The GitLab manual-job button is the approval gate. Do not change their rules to run automatically.
+`terraform:apply` executes the saved plan without another prompt; `terraform:destroy` uses `-auto-approve` after Kubernetes cleanup succeeds. For Luna, launching the lab authorizes provisioning and ending the session initiates cleanup. For ordinary pipelines, the manual buttons remain the approval gates.
 
-Run `bash scripts/test-terraform-ci.sh` locally to check raw/Base64 credential handling, cleanup, state selection, and plan-target checks. It uses a generated disposable key and mock Terraform in an environment cleared of inherited credentials, without contacting OCI or GitLab. Include both new scripts in ShellCheck.
+Run `bash scripts/test-terraform-ci.sh` and `python3 -m unittest discover -s scripts/tests -v` locally (Python tests require PyYAML). They use disposable fixtures and mocked Terraform/OCI/kubectl/HTTP commands, without contacting cloud services. They cover credential handling, session state/closure, pipeline rules, partial-apply cleanup, already-deleted clusters, and failure handling. Run `shellcheck scripts/*.sh` as well. Local initialization was blocked by registry connectivity during development; a passing mock test is not evidence of a successful Luna provisioning/cleanup cycle.

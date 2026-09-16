@@ -17,9 +17,10 @@ bootstrap="$script_dir/terraform-ci.sh"
 test_dir=$(mktemp -d)
 trap 'rm -rf -- "$test_dir"' EXIT
 cd "$test_dir"
-mkdir terraform
+mkdir terraform markers
 openssl genrsa -out test-key.pem 2048 >/dev/null 2>&1
 export TEST_KEY_FILE="$test_dir/test-key.pem" TEST_CALLS="$test_dir/calls"
+export TEST_MARKERS="$test_dir/markers" TEST_STATE_JSON='{}'
 export CI_API_V4_URL=https://gitlab.example/api/v4 CI_PROJECT_ID=123 CI_JOB_TOKEN=test-token
 export TF_VAR_tenancy_ocid=test-tenancy TF_VAR_user_ocid=test-user
 export TF_VAR_compartment_ocid=test-compartment TF_VAR_region=us-phoenix-1
@@ -38,9 +39,26 @@ terraform() {
   [[ ${TEST_TF_FAIL:-false} != true ]] || return 98
   if [[ $2 == plan ]]; then
     printf 'mock plan\n' > terraform/lab.tfplan
+  elif [[ $2 == show ]]; then
+    printf '%s\n' "$TEST_STATE_JSON"
   fi
 }
 export -f terraform
+
+curl() {
+  local address=${!#}
+  if [[ -n ${TEST_MARKER_STATUS:-} ]]; then
+    printf '%s' "$TEST_MARKER_STATUS"
+  elif [[ $* == *'--request POST'* ]]; then
+    printf 'closed\n' > "$TEST_MARKERS/${address##*/}"
+    printf '201'
+  elif [[ -f $TEST_MARKERS/${address##*/} ]]; then
+    printf '200'
+  else
+    printf '404'
+  fi
+}
+export -f curl
 
 success() {
   : > "$TEST_CALLS"
@@ -123,6 +141,59 @@ failure 'TF_VAR_compartment_ocid is missing'
 export TF_VAR_compartment_ocid=test-compartment CI_DEBUG_TRACE=true
 failure 'Disable CI_DEBUG_TRACE'
 unset CI_DEBUG_TRACE
+
+# Luna state follows the recorded launch pipeline, not a pooled compartment.
+export LUNA_DEPLOYMENT=1 CI_COMMIT_BRANCH=main CI_DEFAULT_BRANCH=main CI_COMMIT_REF_PROTECTED=true
+unset CI_PIPELINE_ID
+failure 'Luna requires CI_PIPELINE_ID'
+export CI_PIPELINE_ID=500 CI_COMMIT_REF_PROTECTED=false
+failure 'Luna requires the protected default branch'
+export CI_COMMIT_REF_PROTECTED=true TF_STATE_NAME=ospa2100-phoenix-oke-lab
+failure 'Luna TF_STATE_NAME must match its launch pipeline'
+unset TF_STATE_NAME
+success plan
+grep -q 'terraform/state/luna-oke-500' "$TEST_CALLS"
+cp terraform/lab.target luna.target
+export CI_JOB_ID=2000
+success plan
+cmp -s terraform/lab.target luna.target
+success apply
+export CI_PIPELINE_ID=501
+failure 'Plan target or OCI identity changed' apply
+success plan
+grep -q 'terraform/state/luna-oke-501' "$TEST_CALLS"
+export CI_PIPELINE_ID=500 TEST_MARKER_STATUS=503
+failure 'Cannot check Luna session closure'
+failure 'Cannot record Luna session closure' destroy
+unset TEST_MARKER_STATUS
+# Cleanup must work without saved plan artifacts, and closed sessions must not
+# be recreated by queued/retried jobs even if artifacts no longer exist.
+rm -f terraform/lab.tfplan terraform/lab.target
+success destroy
+[[ -f markers/luna-oke-500-closed ]]
+success destroy
+success plan
+[[ ! -s $TEST_CALLS ]]
+success apply
+[[ ! -s $TEST_CALLS ]]
+export CI_PIPELINE_ID=501
+failure 'Missing plan artifacts' apply
+success plan
+success apply
+# An unreadable state must block destroy, not be mistaken for an empty cluster.
+export TEST_STATE_JSON='invalid json'
+: > "$TEST_CALLS"
+if bash "$bootstrap" destroy > result.log 2>&1; then
+  echo 'Expected unsafe cleanup to block Terraform destroy.' >&2
+  exit 1
+fi
+if grep -q 'destroy -input=false' "$TEST_CALLS"; then
+  echo 'Terraform destroy ran after cleanup failed.' >&2
+  exit 1
+fi
+[[ ! -e /tmp/oke-api-key.pem ]]
+export TEST_STATE_JSON='{}'
+unset LUNA_DEPLOYMENT
 # Terraform errors must also remove the materialized key.
 export TEST_TF_FAIL=true
 if bash "$bootstrap" plan > result.log 2>&1; then

@@ -49,24 +49,33 @@ shell:syntax:
   before_script:
     - bash scripts/ci-tools.sh shellcheck
   script:
-    - shellcheck scripts/validate-lab.sh scripts/ci-tools.sh scripts/terraform-ci.sh scripts/test-terraform-ci.sh
+    - shellcheck scripts/*.sh
 
 terraform:bootstrap-test:
   stage: validate
   before_script:
-    - dnf install -y openssl diffutils
+    - dnf install -y openssl diffutils python3 python3-pyyaml
   script:
     - bash scripts/test-terraform-ci.sh
+    - python3 -m unittest discover -s scripts/tests -v
 
-# These cloud-changing jobs are deliberately manual. Configure the protected,
-# masked variables listed in docs/gitlab-ci.md before using them.
+# Luna automatically provisions on the protected default branch. Only cleanup
+# is manual in that pipeline: Luna starts manual jobs when the session ends.
 .oci_terraform:
   interruptible: false
   before_script:
     - bash scripts/ci-tools.sh terraform
-  resource_group: oke-lab-test
+  variables:
+    OKE_RESOURCE_GROUP: oke-lab-test
+    OKE_ENVIRONMENT: oke-lab-test
+  resource_group: $OKE_RESOURCE_GROUP
   rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$LUNA_DEPLOYMENT == "1" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_REF_PROTECTED == "true"'
+      when: on_success
+      variables:
+        OKE_RESOURCE_GROUP: luna-oke-$CI_PIPELINE_ID
+        OKE_ENVIRONMENT: luna/oke-$CI_PIPELINE_ID
+    - if: '$LUNA_DEPLOYMENT != "1" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       when: manual
       allow_failure: false
 
@@ -91,15 +100,31 @@ terraform:apply:
   script:
     - bash scripts/terraform-ci.sh apply
   environment:
-    name: oke-lab-test
+    name: $OKE_ENVIRONMENT
 
 terraform:destroy:
   extends: .oci_terraform
   stage: cleanup
+  # Available after failed/partial provisioning, without expired plan artifacts.
+  needs: []
+  before_script:
+    - bash scripts/ci-tools.sh terraform
+    - bash scripts/ci-tools.sh oci
+    - bash scripts/ci-tools.sh kubectl
   script:
     - bash scripts/terraform-ci.sh destroy
+  rules:
+    - if: '$LUNA_DEPLOYMENT == "1" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_REF_PROTECTED == "true"'
+      when: manual
+      allow_failure: true
+      variables:
+        OKE_RESOURCE_GROUP: luna-oke-$CI_PIPELINE_ID
+        OKE_ENVIRONMENT: luna/oke-$CI_PIPELINE_ID
+    - if: '$LUNA_DEPLOYMENT != "1" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+      allow_failure: false
   environment:
-    name: oke-lab-test
+    name: $OKE_ENVIRONMENT
     action: stop
 sast:
   stage: test

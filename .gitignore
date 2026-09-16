@@ -6,6 +6,7 @@ terraform/*.tfstate.*
 terraform/*.tfvars
 terraform/*.tfplan
 terraform/lab.target
+__pycache__/
 
 # Keep the documented example configuration tracked.
 !terraform/terraform.tfvars.example
