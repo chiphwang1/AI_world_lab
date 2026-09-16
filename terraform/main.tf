@@ -16,16 +16,17 @@ module "oke" {
   cluster_type            = "enhanced"
   control_plane_is_public = true
 
-  create_vcn                  = true
-  vcn_cidrs                   = [var.vcn_cidr]
-  pods_cidr                   = var.pods_cidr
-  services_cidr               = var.services_cidr
-  cni_type                    = "npn"
-  vcn_create_nat_gateway      = "always"
-  vcn_create_service_gateway  = "always"
-  vcn_create_internet_gateway = "always"
-  create_bastion              = false
-  create_operator             = false
+  create_vcn                            = true
+  vcn_cidrs                             = [var.vcn_cidr]
+  pods_cidr                             = var.pods_cidr
+  services_cidr                         = var.services_cidr
+  cni_type                              = "npn"
+  vcn_create_nat_gateway                = "always"
+  vcn_create_service_gateway            = "always"
+  vcn_create_internet_gateway           = "always"
+  create_bastion                        = false
+  create_operator                       = false
+  worker_legacy_imds_endpoints_disabled = true
 
   create_iam_resources = var.create_policies
   # Workload identity is an enhanced-cluster capability, not a module toggle.
