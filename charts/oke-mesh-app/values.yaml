@@ -1,0 +1,11 @@
+replicaCount: 2
+image: hashicorp/http-echo:1.0.0
+service:
+  type: LoadBalancer
+  annotations:
+    service.beta.kubernetes.io/oci-load-balancer-shape: flexible
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-min: "10"
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-max: "10"
+traffic:
+  enabled: false
+  image: curlimages/curl:8.14.1
