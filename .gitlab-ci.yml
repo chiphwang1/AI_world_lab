@@ -19,9 +19,8 @@ default:
     name: container-registry.oracle.com/os/oraclelinux:9
     entrypoint: [""]
 
-# OCI credentials and the deployment target are supplied only through
-# protected CI/CD variables. This prevents a credential change from retaining
-# a target compartment belonging to a different tenancy.
+# OCI credentials and targets come from protected CI/CD variables or a trusted
+# Luna launch. Never commit credentials or deployment targets to this file.
 
 terraform:format:
   stage: validate
@@ -50,7 +49,14 @@ shell:syntax:
   before_script:
     - bash scripts/ci-tools.sh shellcheck
   script:
-    - shellcheck scripts/validate-lab.sh scripts/ci-tools.sh
+    - shellcheck scripts/validate-lab.sh scripts/ci-tools.sh scripts/terraform-ci.sh scripts/test-terraform-ci.sh
+
+terraform:bootstrap-test:
+  stage: validate
+  before_script:
+    - dnf install -y openssl diffutils
+  script:
+    - bash scripts/test-terraform-ci.sh
 
 # These cloud-changing jobs are deliberately manual. Configure the protected,
 # masked variables listed in docs/gitlab-ci.md before using them.
@@ -58,19 +64,6 @@ shell:syntax:
   interruptible: false
   before_script:
     - bash scripts/ci-tools.sh terraform
-    - umask 077
-    - test -n "$OCI_PRIVATE_KEY_B64" || { echo "OCI_PRIVATE_KEY_B64 is missing from this job"; exit 1; }
-    - printf '%s' "$OCI_PRIVATE_KEY_B64" | base64 -d > /tmp/oke-api-key.pem
-    - test -s /tmp/oke-api-key.pem || { echo "Decoded OCI private key is empty"; exit 1; }
-    - chmod 600 /tmp/oke-api-key.pem
-    - export TF_VAR_private_key_path=/tmp/oke-api-key.pem
-    - export TF_HTTP_ADDRESS="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/ospa2100-phoenix-oke-lab"
-    - export TF_HTTP_LOCK_ADDRESS="${TF_HTTP_ADDRESS}/lock"
-    - export TF_HTTP_UNLOCK_ADDRESS="${TF_HTTP_ADDRESS}/lock"
-    - export TF_HTTP_USERNAME=gitlab-ci-token
-    - export TF_HTTP_PASSWORD="$CI_JOB_TOKEN"
-    - export TF_HTTP_LOCK_METHOD=POST TF_HTTP_UNLOCK_METHOD=DELETE TF_HTTP_RETRY_WAIT_MIN=5
-    - terraform -chdir=terraform init -input=false
   resource_group: oke-lab-test
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
@@ -81,12 +74,13 @@ terraform:plan:
   extends: .oci_terraform
   stage: plan
   script:
-    - terraform -chdir=terraform plan -input=false -out=lab.tfplan
+    - bash scripts/terraform-ci.sh plan
   artifacts:
     access: maintainer
     expire_in: 1 day
     paths:
       - terraform/lab.tfplan
+      - terraform/lab.target
       - terraform/.terraform.lock.hcl
 
 terraform:apply:
@@ -95,7 +89,7 @@ terraform:apply:
   dependencies:
     - terraform:plan
   script:
-    - terraform -chdir=terraform apply -input=false lab.tfplan
+    - bash scripts/terraform-ci.sh apply
   environment:
     name: oke-lab-test
 
@@ -103,7 +97,7 @@ terraform:destroy:
   extends: .oci_terraform
   stage: cleanup
   script:
-    - terraform -chdir=terraform destroy -auto-approve
+    - bash scripts/terraform-ci.sh destroy
   environment:
     name: oke-lab-test
     action: stop

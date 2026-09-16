@@ -9,6 +9,7 @@ terraform {
 }
 
 provider "oci" {
+  auth             = "APIKey"
   tenancy_ocid     = var.tenancy_ocid
   user_ocid        = var.user_ocid
   fingerprint      = var.fingerprint
@@ -24,6 +25,7 @@ data "oci_identity_region_subscriptions" "tenancy" {
 
 provider "oci" {
   alias            = "home"
+  auth             = "APIKey"
   tenancy_ocid     = var.tenancy_ocid
   user_ocid        = var.user_ocid
   fingerprint      = var.fingerprint

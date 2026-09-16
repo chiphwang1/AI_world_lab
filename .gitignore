@@ -5,6 +5,7 @@ terraform/*.tfstate
 terraform/*.tfstate.*
 terraform/*.tfvars
 terraform/*.tfplan
+terraform/lab.target
 
 # Keep the documented example configuration tracked.
 !terraform/terraform.tfvars.example

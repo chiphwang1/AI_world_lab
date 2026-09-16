@@ -23,6 +23,8 @@ Provisioning usually takes 35–50 minutes. Worker compute, boot volumes, the lo
 
 ## Run the lab
 
+For GitLab/Luna execution without downloading an OCI private key, follow the [Luna integration and CI setup](docs/gitlab-ci.md#luna-integration). Luna supplies credentials to the job; plan, apply, and destroy still require manual approval. The commands below are for local execution with OCI credentials and the existing HTTP backend configured.
+
 ```bash
 cd terraform
 cp terraform.tfvars.example terraform.tfvars

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Install only into this disposable CI job. Never print credentials.
-dnf install -y curl unzip tar xz git python3 python3-pip
+dnf install -y curl unzip tar xz git python3 python3-pip openssl diffutils
 mkdir -p /usr/local/bin
 task_tmp=$(mktemp -d)
 trap 'rm -rf "$task_tmp"' EXIT
