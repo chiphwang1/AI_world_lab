@@ -1,32 +1,18 @@
 # Lab architecture
 
-Use this same diagram during the opening lecture and the [student walkthrough](../README.md). It shows logical relationships, not individual network hops. Each learner has a dedicated cluster with two worker nodes; the diagram shows one of several application pods.
+Use this same diagram during the opening lecture and the [student walkthrough](../README.md). It shows logical relationships after traffic and autoscaling are enabled, not individual network hops or current cluster health. Each learner has a dedicated cluster with two worker nodes; the diagram shows one of several application pods. The panels explain different paths within the same cluster, not separate deployments or fixed node placement.
 
-```mermaid
-flowchart TD
-  browser["Browser or curl"] --> lb["OCI public LoadBalancer"]
-  lb --> svc["Service: hello-oke"]
-  generator["Traffic generator + Istio proxy"] --> svc
-  subgraph pod["Application pod — repeated for each replica"]
-    proxy["Istio proxy"] --> web["web container"]
-  end
-  svc --> proxy
-  proxy -. "request metrics, scraped by Prometheus" .-> prometheus["Prometheus"]
-  prometheus -. "traffic relationships" .-> kiali["Kiali"]
-  prometheus -. "metric history" .-> grafana["Grafana"]
-  web -- "CPU usage via kubelet" --> metrics["Metrics Server"]
-  metrics -- "resource metrics" --> hpa["HPA"]
-  hpa -- "desired replica count" --> deployment["Deployment / ReplicaSet"]
-  deployment -- "maintains app pod count" --> pod
-```
+![OKE lab architecture: application traffic, mesh monitoring, and CPU-based pod autoscaling.](images/oke-lab-architecture.png)
+
+[Open the full-size architecture PNG](images/oke-lab-architecture.png). Looking for the student handout? [Download the completion sheet (PDF)](completion-sheet.pdf).
 
 Trace three paths:
 
 1. **Requests:** the public LoadBalancer reaches application pods through the Service. The in-cluster traffic generator uses the Service directly, without the public LoadBalancer. Istio proxies observe requests to the app.
-2. **Dashboards:** Prometheus scrapes request metrics from the proxies. Kiali queries it for traffic relationships; Grafana queries it for history. Localhost port-forwards give your browser access to these internal dashboards. Prometheus also scrapes Istiod; this arrow is omitted for readability.
+2. **Dashboards:** Prometheus scrapes request metrics from the proxies and control-plane metrics from Istiod. Kiali queries it for traffic relationships; Grafana queries it for history. Localhost port-forwards give your browser access to these internal dashboards.
 3. **Scaling:** Metrics Server obtains resource usage from the kubelets. The HPA uses the `web` container's CPU utilization to change the Deployment's replica count; its ReplicaSet maintains those pods. This path does not use Prometheus and does not add worker nodes.
 
-Dashed arrows show telemetry data flowing to its consumers; Prometheus initiates the scrapes, and the dashboards initiate their queries. The diagram is rendered on GitHub; the descriptions above cover the same paths if your Markdown viewer cannot render Mermaid.
+Teal arrows show telemetry data flowing to its consumers; Prometheus initiates the scrapes, and the dashboards initiate their queries. Istiod is shown both as a metric source and as a support component; it is installed only once. The PNG requires no Mermaid renderer; the descriptions above cover the same paths in text.
 
 ## Component ownership
 

@@ -8,6 +8,9 @@ terraform/*.tfplan
 terraform/lab.target
 __pycache__/
 
+# Local PDF build output; the published student handout lives in docs/.
+output/pdf/
+
 # Keep the documented example configuration tracked.
 !terraform/terraform.tfvars.example
 

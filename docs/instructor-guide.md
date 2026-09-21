@@ -4,6 +4,18 @@ This file contains instructor notes, preparation, debrief answers, and release c
 
 Plan for **90 minutes: 30 minutes of lecture and cluster provisioning, followed by 60 minutes of hands-on work and debrief**. Cluster creation starts at workshop minute 0, not before the session. Desktop and repository preparation can happen beforehand. Students follow [README.md](../README.md); use the same [architecture diagram](architecture.md) in the lecture.
 
+## Published learner handouts
+
+The walkthrough embeds the [architecture PNG](images/oke-lab-architecture.png) and links directly to the printable [completion sheet PDF](completion-sheet.pdf). On Luna, students can use the PDF viewer's download button to save it. Keep the [Markdown completion sheet](completion-sheet.md) as the editable source; the PDF contains no answer key.
+
+After editing the sheet, regenerate its two-page PDF with Python 3 and `reportlab` installed in your maintainer environment:
+
+```bash
+python3 scripts/build-completion-sheet.py --output docs/completion-sheet.pdf
+```
+
+Render and visually inspect both pages before publishing. The builder rejects unexpected checkpoint/table structure or overflowing paragraphs. Students do not run it or install PDF tooling. Image authoring details are in [the saved generation prompt](images/architecture-prompt.md); verify every arrow against the Helm configuration when revising it. Publish both binary files with their Markdown links and check them in Luna.
+
 ## Delivery schedule
 
 “Workshop minute” counts from the start of the lecture. “Lab minute” starts at workshop minute 30. These are facilitation targets, not deadlines for assessing students. Checkpoints assess observed results; intervene early when downloads or cloud readiness threaten the session budget.

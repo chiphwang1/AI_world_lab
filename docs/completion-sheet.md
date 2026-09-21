@@ -1,5 +1,7 @@
 # OKE lab completion sheet
 
+[Download the printable completion sheet (PDF)](completion-sheet.pdf). If it opens in your browser, use the PDF viewer's download button to save it. The Markdown version below is available for copying into your notes.
+
 Copy this sheet into your own notes. Fill it during the existing [lab checkpoints](../README.md), not as an extra exercise. Keep credentials, kubeconfig contents, and tokens out of your notes.
 
 Name: __________  Date: __________  Tested repository revision: __________

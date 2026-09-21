@@ -12,7 +12,13 @@ This lab assumes you can navigate a terminal, copy commands, and edit a YAML val
 - Explain manual scaling, CPU-driven autoscaling, and why neither adds worker nodes in this lab.
 - Distinguish readiness from liveness and use pod events to investigate a health warning.
 
-Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private. During the lecture, follow the [architecture diagram and vocabulary](docs/architecture.md). Keep the [completion sheet](docs/completion-sheet.md) in your notes for the lab checkpoints.
+Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private.
+
+[Download the completion sheet (PDF)](docs/completion-sheet.pdf) for the lab checkpoints. If it opens in your browser, use the PDF viewer's download button to save a copy. You can print it or use the [Markdown version](docs/completion-sheet.md) in your own notes.
+
+![OKE lab architecture: application requests through an OCI LoadBalancer, Prometheus feeding Kiali and Grafana, and Metrics Server supplying CPU metrics to the HPA.](docs/images/oke-lab-architecture.png)
+
+The diagram shows the documented setup after traffic and autoscaling are enabled, not a live health snapshot. [Open the full-size PNG](docs/images/oke-lab-architecture.png) or read the [component ownership and vocabulary](docs/architecture.md).
 
 ## Schedule
 
@@ -265,7 +271,7 @@ The proxy-count panel is a scaling indicator, **not HPA desired replicas or pod 
 
 **Checkpoint:** find `hello-oke-traffic → hello-oke` in Kiali and record the Grafana baseline request rate, success rate, latency, and proxy count. Keep both dashboards open for scaling. The [monitoring guide](docs/monitoring.md) explains the underlying Prometheus queries and optional exercises.
 
-Fill the baseline row on your [completion sheet](docs/completion-sheet.md) now and the other rows in step 5. Use the same Grafana time range and p95 latency statistic; write `no data` if a panel is empty.
+Fill the baseline row on your [completion sheet (PDF)](docs/completion-sheet.pdf) now and the other rows in step 5. Use the same Grafana time range and p95 latency statistic; write `no data` if a panel is empty.
 
 Explain why Kiali and Grafana present different views of the same Prometheus data. If the panels remain empty after two minutes of traffic, use the troubleshooting guide with the instructor.
 
@@ -405,7 +411,7 @@ Check your final release settings:
 helm get values hello-oke --namespace oke-lab
 ```
 
-Under `traffic`, confirm `loadEnabled: false`. The baseline generator remains enabled. Use your last five minutes to complete the [completion sheet and debrief questions](docs/completion-sheet.md) with a partner or instructor. Keep your readings and peak replica count; record any blocked checkpoint rather than marking it complete.
+Under `traffic`, confirm `loadEnabled: false`. The baseline generator remains enabled. Use your last five minutes to complete the [completion sheet and debrief questions (PDF)](docs/completion-sheet.pdf) with a partner or instructor. Keep your readings and peak replica count; record any blocked checkpoint rather than marking it complete.
 
 **No manual resource cleanup is required from students.** Leave the application and Helm releases installed. Luna starts automated resource cleanup when the session ends or expires. Stopping CPU load in step 5 is part of observing scale-in, not a cleanup task.
 
