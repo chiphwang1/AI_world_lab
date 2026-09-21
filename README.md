@@ -1,6 +1,8 @@
 # OKE Bootcamp: Build, Run, and Scale Kubernetes on OCI
 
-Build a Helm-based application deployment, run it on your assigned OKE cluster, and scale it as demand changes. Install Istio, Prometheus, Kiali, and Grafana to observe application traffic, health, and scaling. This is a **90-minute workshop: 30 minutes of lecture while the cluster provisions, then 60 minutes of hands-on work and debrief**. Cluster creation and manual resource cleanup are not student exercises.
+Luna provisions your Oracle Kubernetes Engine (OKE) cluster automatically. Use Helm, a package manager for Kubernetes, to install and configure your application and monitoring tools. Istio manages application traffic and reports request metrics; Prometheus collects and stores those metrics; Kiali maps service traffic and health; and Grafana charts metrics over time.
+
+Generate traffic, compare request rates and latency, and observe manual scaling and CPU-based autoscaling. Optionally, replace one application pod and watch Kubernetes restore the replica count. This is a **60-minute hands-on lab and debrief**, following a 30-minute lecture while the cluster provisions (**90 minutes total**). Cluster creation and manual resource cleanup are not student exercises.
 
 This lab assumes you can navigate a terminal, copy commands, and edit a YAML value. By the end, you should be able to:
 
@@ -79,6 +81,21 @@ Keep terminal 1 in this directory for lab commands. The instructor identifies th
 
 ## 2. Install Istio, Prometheus, Kiali, and Grafana — 18 minutes
 
+### What the tools do
+
+| Tool or component | Purpose in this lab | Setup |
+|---|---|---|
+| Helm | Installs and upgrades Kubernetes resources packaged as charts. | Already on the desktop |
+| Istio | Adds proxies beside app containers to manage traffic and report request metrics. | You install it below |
+| Prometheus | Collects and stores metrics from Istio for the dashboards to query. | You install it below |
+| Kiali | Draws a map of service traffic and shows request rates, errors, latency, and workload health. | You install it below |
+| Grafana | Displays metric history in dashboards so you can compare baseline traffic, load, and scaling. | You install it below |
+| Metrics Server | Supplies CPU and memory readings to `kubectl top` and CPU metrics to this lab's HPA. | Provided with the cluster |
+| Cert Manager | Manages TLS certificates; it is a dependency of this OCI-managed Metrics Server add-on. | Provided with the cluster |
+| HPA | Adjusts app replicas using CPU metrics; it does not add worker nodes. | You enable it in step 5 |
+
+`kubectl` inspects and controls Kubernetes resources. OCI CLI authenticates your Kubernetes connection. Both are already on the desktop. Prometheus supplies dashboard data; Metrics Server supplies this HPA's CPU input. See the [architecture diagram](docs/architecture.md) for the two paths.
+
 ### Install Istio
 
 This lab uses **sidecar mode**: Istio adds a proxy beside each application container. The preflight checks the pinned release's Kubernetes compatibility.
@@ -105,17 +122,35 @@ kubectl label namespace oke-lab istio-injection=enabled --overwrite
 
 Namespace labeling enables injection for **new pods**. Do not label `istio-system` for injection.
 
-### Install Prometheus, Kiali, and Grafana
+### Install Prometheus
 
-Prometheus collects Istio request metrics. Kiali uses them to draw service-to-service traffic; Grafana uses the same Prometheus data source for time-series dashboards. All three stay inside the cluster. This short-lived lab uses no persistent telemetry volumes.
+Prometheus collects Istio request metrics. Install it before Kiali and Grafana, which query its data. This lab uses temporary storage, so replacing the Prometheus pod loses metric history.
 
 ```bash
 helm upgrade --install prometheus prometheus-community/prometheus \
   --namespace istio-system --version "$PROMETHEUS_CHART_VERSION" \
   -f helm/values/prometheus.yaml --wait --timeout 10m
+```
+
+Wait for this command to finish successfully before continuing.
+
+### Install Kiali
+
+Kiali uses Prometheus data to show which services communicate and how their requests behave. The lab values point Kiali to the Prometheus instance you just installed.
+
+```bash
 helm upgrade --install kiali-server kiali/kiali-server \
   --namespace istio-system --version "$KIALI_CHART_VERSION" \
   -f helm/values/kiali.yaml --wait --timeout 10m
+```
+
+You will open Kiali and inspect the traffic graph in step 4, after the app and traffic generator are running.
+
+### Install Grafana
+
+Grafana uses the same Prometheus data to plot traffic and scaling over time. The command below installs the dashboard and data source from the lab files. All three monitoring tools remain internal to the cluster, with no persistent telemetry volumes.
+
+```bash
 helm upgrade --install grafana grafana \
   --repo https://grafana-community.github.io/helm-charts \
   --namespace istio-system --version "$GRAFANA_CHART_VERSION" \

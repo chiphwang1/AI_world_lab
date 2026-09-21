@@ -100,6 +100,39 @@ The preflight compatibility check follows the pinned Istio 1.31.x range, Kuberne
 
 The GitHub repository is private and has no established workshop release tag yet. Arrange access or a prepared checkout and record a tested commit/tag before distribution. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
 
-Suggested Luna description: **Build, run, and scale an application on OKE. Cluster creation runs during the opening lecture. Then customize a Helm deployment, expose it through an OCI LoadBalancer, and use Istio, Prometheus, Kiali, and Grafana to observe traffic and scaling. Test manual scaling and CPU-based autoscaling, with optional pod recovery.**
-
 `terraform/` and CI scripts are instructor-managed; `charts/` and `helm/` contain learner deployment materials. Do not mix the legacy `kubernetes/` manifests into the Helm student workflow. See [CI administration](gitlab-ci.md), [local Terraform workflow](maintainer-infrastructure.md), and [cleanup](cleanup.md).
+
+## Suggested Luna description
+
+Deploy, monitor, and scale an application on a Luna-provisioned Oracle Kubernetes Engine (OKE) cluster. Use Helm, a package manager for Kubernetes, to install and configure your application and monitoring tools. Istio manages application traffic and reports request metrics; Prometheus collects and stores those metrics; Kiali maps service traffic and health; and Grafana charts metrics over time. Generate traffic, compare request rates and latency, and observe manual scaling and CPU-based autoscaling. Optionally, replace one application pod and watch Kubernetes restore the replica count.
+
+### What you will build
+
+- **Application on OKE:** A customized Helm deployment running on your Luna-provisioned cluster, exposed through an OCI LoadBalancer.
+- **Istio service mesh:** Proxies alongside your application containers to observe traffic.
+- **Prometheus metrics store:** Collects and stores request metrics from Istio for Kiali and Grafana to query.
+- **Kiali traffic graph:** Maps communication between services and shows request rates, errors, latency, and workload health.
+- **Grafana dashboard:** Plots metrics over time so you can compare baseline traffic, load, and scaling.
+- **Traffic and autoscaling:** A traffic generator and Horizontal Pod Autoscaler (HPA) to demonstrate how application replicas respond to CPU demand.
+
+### What you will learn
+
+- Customize and deploy an application with Helm.
+- Explain how Kubernetes Services keep an application reachable as pods change.
+- Explore service traffic in Kiali and compare baseline and load metrics in Grafana.
+- Scale replicas manually and observe CPU-based HPA scale-out and scale-in.
+- Distinguish readiness from liveness and investigate health warnings.
+- Optionally, replace one application pod and observe Kubernetes restore the desired replica count.
+
+### Before you begin
+
+Have these ready before the hands-on portion:
+
+- Access to your assigned Luna desktop and lab repository or prepared checkout.
+- Your assigned cluster context and working kubeconfig, provided by the instructor.
+- A Bash terminal with OCI CLI, kubectl, Helm, Git, and curl installed; the instructor prepares these tools.
+- Basic familiarity with terminal commands and editing a YAML file.
+
+**Lab duration:** 60 minutes, including hands-on exercises and debrief. Complete the introductory lecture and cluster provisioning before the lab timer starts.
+
+**Note:** Use only your assigned training cluster. No manual infrastructure cleanup is required from students; Luna starts automated cleanup when the session ends or expires.
