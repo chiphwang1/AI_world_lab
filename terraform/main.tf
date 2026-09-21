@@ -11,10 +11,18 @@ module "oke" {
   compartment_id = var.compartment_ocid
   region         = var.region
 
-  cluster_name            = var.cluster_name
-  kubernetes_version      = var.kubernetes_version
-  cluster_type            = "enhanced"
-  control_plane_is_public = true
+  cluster_name                      = var.cluster_name
+  kubernetes_version                = var.kubernetes_version
+  cluster_type                      = "enhanced"
+  control_plane_is_public           = true
+  assign_public_ip_to_control_plane = true
+  control_plane_allowed_cidrs       = var.control_plane_allowed_cidrs
+
+  # The HPA exercise requires the resource metrics API, independently of Prometheus.
+  cluster_addons = {
+    CertManager             = {}
+    KubernetesMetricsServer = {}
+  }
 
   create_vcn                  = true
   vcn_cidrs                   = [var.vcn_cidr]

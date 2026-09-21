@@ -14,3 +14,8 @@ __pycache__/
 # Dedicated local credential for this GitLab project (never commit).
 .gitlab_oke_bootcamp_ed25519
 .gitlab_oke_bootcamp_ed25519.pub
+
+# Local OCI identity, signing keys, and user-supplied credential archive.
+.oci-local/
+ospa_traing_api_key.zip
+ospa_traing_api_key/

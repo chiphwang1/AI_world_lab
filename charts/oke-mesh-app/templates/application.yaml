@@ -7,12 +7,16 @@ metadata:
     app.kubernetes.io/name: hello-oke
     app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       app: {{ .Release.Name }}
   template:
     metadata:
+      annotations:
+        checksum/server: {{ .Files.Get "files/server.py" | sha256sum }}
       labels:
         app: {{ .Release.Name }}
         version: v1
@@ -23,24 +27,26 @@ spec:
       containers:
         - name: web
           image: {{ .Values.image | quote }}
-          args: ["-text=hello from OKE monitoring lab", "-listen=:5678"]
+          command: ["python", "-B", "-u", "/app/server.py"]
+          env:
+            - name: APP_MESSAGE
+              value: {{ .Values.message | quote }}
           ports:
             - name: http
               containerPort: 5678
           resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 200m
-              memory: 128Mi
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: server
+              mountPath: /app
+              readOnly: true
           readinessProbe:
             httpGet:
-              path: /
+              path: /healthz
               port: http
           livenessProbe:
             httpGet:
-              path: /
+              path: /healthz
               port: http
             initialDelaySeconds: 10
           securityContext:
@@ -50,6 +56,10 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: [ALL]
+      volumes:
+        - name: server
+          configMap:
+            name: {{ .Release.Name }}-server
 ---
 apiVersion: v1
 kind: Service

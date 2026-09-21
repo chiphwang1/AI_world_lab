@@ -3,13 +3,17 @@ tenancy_ocid     = "ocid1.tenancy.oc1..example"
 user_ocid        = "ocid1.user.oc1..example"
 fingerprint      = "aa:bb:cc:dd:ee:ff"
 private_key_path = "/absolute/path/to/oci_api_key.pem"
-region           = "us-ashburn-1"
+region           = "us-phoenix-1"
 compartment_ocid = "ocid1.compartment.oc1..example"
 
-cluster_name       = "oke-monitoring-lab"
-# Verified in us-ashburn-1 on 2026-09-15; confirm before every new deployment.
+cluster_name = "oke-monitoring-lab"
+# Verified in us-phoenix-1 on 2026-09-18; confirm before every new deployment.
 kubernetes_version = "v1.36.1"
-node_shape          = "VM.Standard.E4.Flex"
-node_ocpus          = 1
-node_memory_gb      = 16
-node_count           = 2
+# E4 was absent from Phoenix Compute and OKE shape lists on that date.
+node_shape     = "VM.Standard.E5.Flex"
+node_ocpus     = 1
+node_memory_gb = 16
+node_count     = 2
+
+# Replace this documentation address with actual operator/runner/desktop egress CIDRs.
+control_plane_allowed_cidrs = ["192.0.2.1/32"]

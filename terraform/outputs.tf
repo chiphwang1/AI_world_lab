@@ -23,6 +23,6 @@ output "deployment_target" {
 }
 
 output "kubeconfig_command" {
-  description = "Run this command to configure kubectl."
-  value       = "oci ce cluster create-kubeconfig --cluster-id ${module.oke.cluster_id} --region ${var.region} --token-version 2.0.0 --kubeconfig-file $HOME/.kube/config --overwrite"
+  description = "Run with the intended OCI profile/auth selected, then export KUBECONFIG=$HOME/.kube/oke-lab."
+  value       = "oci ce cluster create-kubeconfig --cluster-id ${module.oke.cluster_id} --region ${var.region} --token-version 2.0.0 --file \"$HOME/.kube/oke-lab\" --kube-endpoint PUBLIC_ENDPOINT --with-auth-context"
 }

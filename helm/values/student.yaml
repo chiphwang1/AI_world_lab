@@ -1,0 +1,10 @@
+# Edit the message, then render and deploy this file during the Build exercise.
+message: Hello from my OKE bootcamp
+replicaCount: 2
+resources:
+  requests:
+    cpu: 100m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi

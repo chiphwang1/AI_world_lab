@@ -38,6 +38,16 @@ variable "vcn_cidr" {
   description = "CIDR for the new lab VCN."
   default     = "10.0.0.0/16"
 }
+variable "control_plane_allowed_cidrs" {
+  type        = list(string)
+  description = "Client IPv4 CIDRs allowed to reach the public Kubernetes API. Include the operator, CI runner, and Luna desktop egress addresses. Empty denies external access."
+  default     = []
+
+  validation {
+    condition     = alltrue([for cidr in var.control_plane_allowed_cidrs : can(cidrnetmask(cidr))])
+    error_message = "Each control-plane client address must be a valid IPv4 CIDR (use /32 for one address)."
+  }
+}
 variable "pods_cidr" {
   type        = string
   description = "Non-overlapping Pod CIDR."

@@ -1,12 +1,14 @@
 # Cleanup
 
-## Learners: finish through Luna
+## Learners: no manual resource cleanup
 
-Follow the [walkthrough](../README.md#7-finish-the-lab) to disable traffic, uninstall the `hello-oke` Helm release, and wait for its LoadBalancer Service to disappear. Stop localhost port-forwards, then choose **End session** in Luna. Do not run Terraform destroy.
+The [student walkthrough](../README.md#7-finish-the-lab) has no resource-cleanup exercise. Students stop CPU load to observe scale-in, then leave the application and Helm releases installed. Luna starts automated cleanup when the session ends or expires; instructors verify it completes. Students do not uninstall releases, delete Services, or run Terraform destroy.
 
-Prometheus and Kiali use ClusterIP Services and no persistent telemetry volumes. Their in-cluster resources disappear with the dedicated cluster. If repeating the exercise in the same active session, uninstall `kiali-server`, `prometheus`, `istiod`, and `istio-base` from `istio-system` in that order, after uninstalling the app. Helm retains Istio CRDs; do not broadly delete CRDs from any shared cluster.
+Prometheus, Kiali, and Grafana use ClusterIP Services and no persistent telemetry volumes. Their in-cluster resources, and the application's remaining Kubernetes objects, disappear with the dedicated cluster. Stop the local Kiali and Grafana port-forwards when finished; this does not remove cloud resources. The automation must delete the application's cloud LoadBalancer first, as described below.
 
 The remainder of this page is for maintainers.
+
+If repeating the exercise in the same active session, maintainers can uninstall `hello-oke`, wait for its LoadBalancer Service to disappear, then uninstall `grafana` (if installed), `kiali-server`, `prometheus`, `istiod`, and `istio-base` from `istio-system` in that order. Helm retains Istio CRDs; do not broadly delete CRDs from any shared cluster.
 
 ## Luna session cleanup
 

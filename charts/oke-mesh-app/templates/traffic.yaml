@@ -25,6 +25,22 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
+              {{- if .Values.traffic.loadEnabled }}
+              deadline=$(( $(date +%s) + {{ .Values.traffic.durationSeconds }} ))
+              worker=0
+              while [ "$worker" -lt {{ .Values.traffic.concurrency }} ]; do
+                (
+                  while [ "$(date +%s)" -lt "$deadline" ]; do
+                    curl --fail --silent --show-error --max-time 5 \
+                      http://{{ .Release.Name }}:80/work >/dev/null || true
+                  done
+                ) &
+                worker=$((worker + 1))
+              done
+              echo 'CPU load started; it will stop automatically.'
+              wait
+              echo 'CPU load finished; returning to baseline traffic.'
+              {{- end }}
               while true; do
                 curl --fail --silent --show-error --max-time 5 http://{{ .Release.Name }}:80/ || true
                 sleep 2

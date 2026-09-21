@@ -1,19 +1,89 @@
-# Observe the application with Kiali
+# Observe the application with Kiali and Grafana
 
-Complete the [learner walkthrough](../README.md) first: Istio, Prometheus, Kiali, and the Helm application must be installed, with traffic enabled. Use the Luna desktop and your dedicated lab kubeconfig. No Terraform commands are needed.
+Complete steps 1–4 of the [student walkthrough](../README.md) first: Istio, Prometheus, Kiali, Grafana, and the Helm application must be installed, with traffic enabled. Kiali and Grafana are part of the 55-minute core lab. This page provides reference commands and deeper checks; direct Prometheus exploration, controlled outages, and OCI exercises are optional and require additional time. Use the Luna desktop and your dedicated lab kubeconfig.
 
 ## Traffic and health
 
 1. Open Kiali through the localhost port-forward in the walkthrough.
 2. Select `oke-lab`, a recent time range, and automatic refresh.
 3. Find the `hello-oke-traffic` client and `hello-oke` service/workload. Observe HTTP request volume, success rate, and latency; graph names/grouping vary with the selected view.
-4. Open the workload details and inspect its replicas and proxy status. This lab supplies metrics, not distributed tracing or Grafana dashboards.
+4. Open the workload details and inspect its replicas and proxy status. This lab supplies metrics, not distributed tracing. Compare the traffic graph with the provisioned Grafana dashboard below.
 
-## Controlled outage and recovery
+## Grafana dashboard
 
-Only do this in your own disposable lab cluster, while the traffic generator is running.
+Grafana is installed in step 2 of the main walkthrough and opened in step 4. It reads the existing Prometheus instance; it requests no additional node, load balancer, or persistent volume. If already installed, skip the Helm command below and open the port-forward. To reproduce or update the installation, run from the repository root with the lab kubeconfig selected:
 
 ```bash
+source helm/versions.env
+helm upgrade --install grafana grafana \
+  --repo https://grafana-community.github.io/helm-charts \
+  --namespace istio-system --version "$GRAFANA_CHART_VERSION" \
+  -f helm/values/grafana.yaml \
+  --set-file dashboards.default.oke-lab.json=helm/dashboards/oke-lab.json \
+  --wait --timeout 10m
+kubectl -n istio-system port-forward --address 127.0.0.1 svc/grafana 13000:80
+```
+
+Open **http://127.0.0.1:13000/d/oke-lab** on the same workstation. The **OKE Lab — Traffic & Scaling** dashboard refreshes every 15 seconds and shows request rate, success rate, latency, response codes, application proxy count, and Istiod scrape health. Use a 30-minute time range to see the load test and scale-in together. No login is required for Viewer access. This setting is only for the disposable lab: the Service is reachable within the cluster, so never expose it using a public LoadBalancer, Ingress, or `--address 0.0.0.0`.
+
+The dashboard is provisioned from `helm/dashboards/oke-lab.json`; do not edit a temporary UI copy. Grafana storage is ephemeral, and Prometheus retains only two hours of metrics (lost earlier if its pod is replaced). Proxy count is an observation of successful scrapes, **not** an HPA desired/current replica metric. Follow the load commands below and compare Grafana with `kubectl -n oke-lab get hpa`.
+
+## Compare baseline, load, and recovery
+
+During the walkthrough's Scale exercise, record Grafana request rate, latency, success rate, and proxy count before load, during `/work` traffic, and after returning to baseline. Compare with Kiali's traffic graph and the actual HPA replica count. Use `kubectl top pods --containers` and `kubectl describe hpa hello-oke` for CPU and scaling evidence; neither dashboard is the HPA's metric source.
+
+Deleting one pod during Recover tests the Deployment controller's self-healing. It does not guarantee a visible outage: other replicas can continue serving requests. Use the optional exercise below only if you want to see a deliberate complete loss of application endpoints.
+
+## Prometheus browser checks and repeatable load
+
+With the lab kubeconfig selected, open a second localhost-only port-forward:
+
+```bash
+kubectl -n istio-system port-forward --address 127.0.0.1 svc/prometheus-server 19090:80
+```
+
+Open `http://127.0.0.1:19090`. In Query, execute each expression and select Graph with a 15-minute range:
+
+```promql
+sum(rate(istio_requests_total{reporter="destination",destination_workload_namespace="oke-lab",destination_workload="hello-oke"}[1m]))
+```
+
+```promql
+count(up{job="istio-workloads",namespace="oke-lab",pod=~"hello-oke-[a-f0-9]+-.*"} == 1)
+```
+
+The first graph shows inbound requests/second. The second counts successfully scraped application proxies, excluding the traffic generator. It is a useful scaling visualization, not a readiness or HPA metric: scrape discovery can lag pod changes. This lightweight Prometheus configuration does not install kube-state-metrics; use `kubectl get hpa` for authoritative HPA current/desired replicas and CPU utilization. The HPA uses Metrics Server, not Prometheus.
+
+For scrape health, use Table with `up{job=~"istiod|istio-workloads"}`; current targets should return `1`. In Kiali, check Mesh for the control plane, Workloads → `hello-oke` for health and pods, and its Envoy tab for service routing configuration. A brief Degraded state during scale-out should resolve when the new pods become Ready.
+
+Reuse the chart's built-in, two-worker load generator for a bounded five-minute burst:
+
+```bash
+helm upgrade hello-oke ./charts/oke-mesh-app -n oke-lab --reuse-values \
+  --set autoscaling.enabled=true --set traffic.enabled=true \
+  --set traffic.loadEnabled=true --set traffic.durationSeconds=300 \
+  --set traffic.concurrency=2 --wait --timeout 10m
+kubectl -n oke-lab get hpa hello-oke --watch
+```
+
+Watch Kiali traffic and the Grafana dashboard (or the direct Prometheus graphs above) while replicas increase. After the generator logs `CPU load finished; returning to baseline traffic.`, reset the burst flag so a later pod restart cannot trigger another burst:
+
+```bash
+helm upgrade hello-oke ./charts/oke-mesh-app -n oke-lab --reuse-values \
+  --set traffic.loadEnabled=false --wait --timeout 10m
+kubectl -n oke-lab get hpa,deploy
+```
+
+Allow several minutes for CPU metrics and stabilization before expecting two replicas again. To repeat, start only after the previous burst is disabled and scale-in completes. Leave the namespace filter at `oke-lab`; unrelated system workloads are outside this exercise.
+
+## Optional: controlled outage and recovery
+
+Only do this in your own disposable lab cluster, while baseline traffic is running. Disable the HPA first so it does not undo your manual scaling:
+
+```bash
+helm upgrade hello-oke ./charts/oke-mesh-app --namespace oke-lab \
+  --reuse-values --set autoscaling.enabled=false --set replicaCount=2 \
+  --set traffic.loadEnabled=false --wait --timeout 10m
 kubectl -n oke-lab scale deployment/hello-oke --replicas=0
 kubectl -n oke-lab logs deployment/hello-oke-traffic -c traffic --tail=10
 # Wait 30–60 seconds, observe failed requests in Kiali, then restore promptly:
@@ -21,7 +91,7 @@ kubectl -n oke-lab scale deployment/hello-oke --replicas=2
 kubectl -n oke-lab rollout status deployment/hello-oke --timeout=300s
 ```
 
-The client's proxy should record failures while the service has no ready endpoints. After restoring the app, new requests should succeed. A five-minute graph still includes older errors until they age out; do not confuse historical errors with a continuing outage. Helm's desired replica count remains two.
+The client's proxy should record failures while the service has no ready endpoints. After restoring the app, new requests should succeed. A five-minute graph still includes older errors until they age out; do not confuse historical errors with a continuing outage. Helm's desired replica count remains two; the HPA stays disabled until you explicitly enable it again using step 5 of the walkthrough.
 
 ## Kubernetes evidence
 
@@ -37,7 +107,7 @@ kubectl -n oke-lab logs deployment/hello-oke -c istio-proxy --tail=50
 kubectl -n oke-lab get events --sort-by=.lastTimestamp
 ```
 
-Expected: all nodes are `Ready`, the Deployment has `2/2` ready replicas, each app pod has its injected proxy, and the Service has an external IP. `kubectl top` needs Metrics Server; its absence does not mean Istio/Prometheus is broken. The echo container may only log startup; use `istio-proxy` logs for request access logs.
+Expected: all nodes are `Ready`, the Deployment's ready replicas match its desired count (two at baseline, more during scaling), each app pod has its injected proxy, and the Service has an external IP. `kubectl top` needs Metrics Server; its absence does not mean Istio/Prometheus is broken. Use `web` logs for application requests and `istio-proxy` logs for mesh access logs. Health probes are omitted from application logs.
 
 ## Optional: OCI dashboard (instructor-enabled)
 
@@ -65,7 +135,7 @@ For OCI-collected workload logs, use **Logging → Log Search**, then filter to 
 
 1. Create an OCI Monitoring alarm on pod readiness or Load Balancer backend health, routed to a test Notifications topic.
 2. Record its normal `OK` state.
-3. Cause a temporary, reversible outage:
+3. Disable the HPA and burst load as shown above, then cause a temporary, reversible outage:
 
    ```bash
    kubectl -n oke-lab scale deployment/hello-oke --replicas=0
@@ -81,4 +151,4 @@ For OCI-collected workload logs, use **Logging → Log Search**, then filter to 
 
 6. Confirm the alarm returns to `OK`, then remove test alerting resources when finished.
 
-Finish using the Helm uninstall and **End session** steps in the learner walkthrough. Learners do not destroy the infrastructure directly.
+The core student lab requires no manual resource cleanup: leave its Helm releases installed for Luna's session-end automation. Optional OCI alarm/notification resources are outside that workflow; agree their removal with the instructor before creating them.
