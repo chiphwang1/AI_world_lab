@@ -5,12 +5,14 @@
 This lab provisions Oracle Kubernetes Engine (OKE) and deploys a small HTTP echo application.
 
 - `terraform/`: cluster configuration, providers, HTTP backend, variables, outputs, and example inputs. The OKE module is pinned in `main.tf`.
-- `kubernetes/`: Kustomize configuration, namespace, Deployment, and LoadBalancer Service for `hello-oke` in `oke-lab`.
+- `charts/oke-mesh-app/`: learner Helm chart, Python training app, Service, traffic generator, and HPA for `hello-oke` in `oke-lab`.
+- `helm/`: pinned chart versions, student values, monitoring configuration, and Grafana dashboard.
+- `kubernetes/`: legacy Kustomize exercise retained for maintainers; shares resource names with the Helm app.
 - `scripts/`: live-cluster validation and disposable CI tool installation.
 - `docs/`: monitoring exercises, cleanup, troubleshooting, and GitLab CI setup.
 - `.gitlab-ci.yml`: validation, security scanning, and manual infrastructure jobs.
 
-There is no application source tree, asset bundle, or dedicated unit-test suite; the workload uses a published container image.
+The training app source is `charts/oke-mesh-app/files/server.py`, mounted into a published Python runtime image. Tests are in `scripts/tests/`; learners do not build an image.
 
 ## Build, Test, and Development Commands
 
@@ -21,12 +23,13 @@ terraform -chdir=terraform fmt -check -recursive
 terraform -chdir=terraform init -backend=false
 terraform -chdir=terraform validate
 kubectl kustomize kubernetes
-shellcheck scripts/validate-lab.sh scripts/ci-tools.sh
+shellcheck scripts/check-ready.sh scripts/validate-lab.sh scripts/ci-tools.sh
+bash scripts/test-helm.sh --local-only
 ```
 
 These check formatting, initialize dependencies without the backend, validate Terraform, render manifests, and lint Bash. Use `terraform -chdir=terraform fmt -recursive` to format changes.
 
-With an authorized cluster and kubeconfig, deploy using `kubectl apply -k kubernetes`, then run `bash scripts/validate-lab.sh` to check nodes, rollout, events, and HTTP reachability. There is no separate build step. Run `scripts/ci-tools.sh` only in disposable CI environments; it installs system tools.
+With an authorized cluster and kubeconfig, follow the Helm deployment commands in `README.md`, then run `bash scripts/validate-lab.sh` to check nodes, rollout, events, and HTTP reachability. Do not also apply `kubernetes/` to a Helm-managed lab. There is no separate image build step. Run `scripts/ci-tools.sh` only in disposable CI environments; it installs system tools. For full chart rendering and Python tests, use the commands in `helm/README.md`; report upstream tests skipped by `--local-only`.
 
 ## Coding Style & Naming Conventions
 

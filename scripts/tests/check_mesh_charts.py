@@ -109,9 +109,19 @@ class AppCharts(unittest.TestCase):
             "-f", "helm/values/student.yaml", "--set", "replicaCount=4"))
         app = resource(docs, "Deployment", "hello-oke")["spec"]
         self.assertEqual(app["replicas"], 4)
-        self.assertEqual(app["template"]["spec"]["containers"][0]["env"][0]["value"],
-                         "Hello from my OKE bootcamp")
+        student_values = yaml.safe_load((ROOT / "helm/values/student.yaml").read_text())
+        web = app["template"]["spec"]["containers"][0]
+        env = {item["name"]: item.get("value") for item in web["env"]}
+        self.assertEqual(env["APP_MESSAGE"], student_values["message"])
         self.assertFalse(any(d["kind"] == "HorizontalPodAutoscaler" for d in docs))
+
+    def test_custom_message_override_does_not_require_editing_student_file(self):
+        message = "Hello from a learner's chart test"
+        docs = render("hello-oke", "./charts/oke-mesh-app", extra=(
+            "-f", "helm/values/student.yaml", "--set-string", f"message={message}"))
+        web = resource(docs, "Deployment", "hello-oke")["spec"]["template"]["spec"]["containers"][0]
+        env = {item["name"]: item.get("value") for item in web["env"]}
+        self.assertEqual(env["APP_MESSAGE"], message)
 
 
 @unittest.skipIf(LOCAL_ONLY, "Upstream chart rendering explicitly skipped (--local-only)")
@@ -126,6 +136,11 @@ class UpstreamCharts(unittest.TestCase):
         self.assertEqual(resource(docs, "Service", "grafana")["spec"]["type"], "ClusterIP")
         pod = resource(docs, "Deployment", "grafana")["spec"]["template"]["spec"]
         self.assertFalse(pod["automountServiceAccountToken"])
+        grafana = next(c for c in pod["containers"] if c["name"] == "grafana")
+        self.assertEqual(grafana["resources"]["requests"]["memory"], "512Mi")
+        self.assertEqual(grafana["resources"]["limits"]["memory"], "1Gi")
+        memory_targets = [e["value"] for e in grafana["env"] if e["name"] == "GOMEMLIMIT"]
+        self.assertEqual(memory_targets, ["512MiB"])
         config = resource(docs, "ConfigMap", "grafana")["data"]
         sources = yaml.safe_load(config["datasources.yaml"])["datasources"]
         self.assertEqual(sources[0]["uid"], "oke-prometheus")

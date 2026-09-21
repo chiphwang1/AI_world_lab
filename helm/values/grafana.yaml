@@ -17,10 +17,14 @@ testFramework:
 resources:
   requests:
     cpu: 100m
-    memory: 256Mi
+    memory: 512Mi
   limits:
     cpu: 500m
-    memory: 512Mi
+    memory: 1Gi
+# Leave headroom for memory outside the Go runtime (plugins, mappings, etc.).
+# GOMEMLIMIT is a soft runtime target, not the Kubernetes container limit.
+env:
+  GOMEMLIMIT: 512MiB
 datasources:
   datasources.yaml:
     apiVersion: 1

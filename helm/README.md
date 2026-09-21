@@ -1,6 +1,6 @@
 # Learner Helm materials
 
-Follow the root [walkthrough](../README.md). Students install the charts in this order: Istio base (CRDs), istiod, Prometheus, Kiali, Grafana, then the local application. The application is installed about 25 minutes into the targeted 55-minute core hands-on lab (60 minutes with optional recovery). An umbrella chart would obscure the CRD/control-plane readiness boundary.
+Follow the root [walkthrough](../README.md). Students install the charts in this order: Istio base (CRDs), istiod, Prometheus, Kiali, Grafana, then the local application. The application exercise starts at minute 23 in the planned 55-minute core lab, followed by five minutes for debrief and delays. Pod recovery is optional only when core work finishes five minutes early. An umbrella chart would obscure the CRD/control-plane readiness boundary.
 
 `versions.env` pins upstream chart releases; `values/` holds our training configuration. Students edit `values/student.yaml` to customize their deployment. We do not maintain copies of upstream charts. The local `charts/oke-mesh-app` chart owns the Python workload and ConfigMap, one LoadBalancer Service, optional mesh traffic, and an optional HPA. Its Python runtime image is pinned by version; no student image build or registry credentials are required.
 
@@ -18,6 +18,8 @@ Kiali is read-only but anonymous, ClusterIP-only, and accessed through localhost
 
 Grafana uses anonymous Viewer access, no Kubernetes API permissions or service-account token, a ClusterIP Service, and ephemeral storage. The pinned chart provisions the read-only data source and dashboard from repository files on every install. Admin credentials are generated into a Kubernetes Secret by the chart, never stored in this repository. Anyone who can reach the Service can view/query the lab metrics; do not expose it publicly or use this access model for sensitive production data. Manual UI changes are not retained after pod replacement; update the versioned dashboard instead.
 
+Grafana requests 100m CPU/512Mi memory and has limits of 500m CPU/1Gi memory. Its explicit `GOMEMLIMIT=512MiB` overrides the chart's automatic runtime target and leaves space below the container cap for other process memory. These are measured-training configuration values, not production sizing guidance. The previous 512Mi container limit produced a confirmed OOM kill during rehearsal. Retest sustained dashboard refreshes after changing Grafana versions or panel/query counts.
+
 ## Validation and release
 
 ```bash
@@ -26,13 +28,19 @@ bash scripts/test-helm.sh
 python3 -m unittest discover -s scripts/tests -v
 ```
 
-The Helm test script renders releases and checks wiring without accessing a cluster, including Grafana's data source, dashboard, and internal-only access. It requires Helm, Python 3/PyYAML, and network access to chart repositories. The unit tests exercise application routes on loopback and existing mocked CI lifecycle behavior. A [local rehearsal](../docs/rehearsal-2026-09-18.md) verified deployment, mesh traffic, scaling, recovery, and Grafana rendering. Still rehearse the complete student install order, both dashboard checks, manual 2→4→2 scaling, HPA scale-out/scale-in, and optional recovery in one dedicated Luna session before publishing. Leave releases installed and verify automated session-end cleanup removes the cloud LoadBalancer and infrastructure without a student uninstall. Record peak replicas and timing, verify both Metrics Server and scheduling capacity, and tune the bounded load if necessary. Confirm the revised core workflow fits 55 minutes after the cluster is ready; Luna timing, cleanup, and concurrent capacity remain unverified.
+The Helm test script renders releases and checks wiring without accessing a cluster, including Grafana's data source, dashboard, and internal-only access. It requires Helm, Python 3/PyYAML, and network access to chart repositories. The unit tests exercise application routes on loopback, mocked CI lifecycle behavior, and the read-only student preflight's success/failure paths. A [local rehearsal](../docs/rehearsal-2026-09-18.md) verified deployment, mesh traffic, scaling, recovery, and Grafana rendering. Use the [instructor pilot checklist](../docs/instructor-guide.md#classroom-pilot-and-release-gates) to validate a complete 90-minute Luna session, including the student install order, both dashboard UIs, manual 2→4→2 scaling, HPA scale-out/scale-in, and session-end cleanup. Luna timing, cleanup, and concurrent capacity remain unverified.
 
 For an offline check of just the local app chart, run `bash scripts/test-helm.sh --local-only`; this explicitly skips upstream rendering. Run the full check before release. Existing GitLab lifecycle tests do not run these Helm checks automatically.
 
-## Separate GitHub repository
+Contract tests accept the learner's current `student.yaml` message and separately verify a message override without editing that file. Full upstream tests also check Grafana's memory request, limit, and single explicit Go memory target. Do not restore a learner's customized message just to make tests pass.
 
-Pending an approved GitHub owner, name, and visibility, package only learner content: `README.md`, `charts/`, `helm/`, `docs/monitoring.md`, `docs/troubleshooting.md`, `scripts/test-helm.sh`, `scripts/tests/check_mesh_charts.py`, and `scripts/tests/test_bootcamp_app.py`. Adjust instructor-only links and test commands for the split and provide a tagged clone URL in Luna. Do not mirror the entire infrastructure repository or its history: exclude `.git/`, credentials, local config, Terraform inputs/state/plans, and internal operational logs.
+The [September 21 improvement retest](../docs/rehearsal-2026-09-21-improvements.md) records the memory fix, existing-release timing, capacity/cost comparison, and remaining classroom-release gates. Warm upgrades are not cold-install measurements.
+
+## GitHub distribution
+
+The private repository is [chiphwang1/AI_world_lab](https://github.com/chiphwang1/AI_world_lab). It contains both learner and maintainer materials. Arrange learner access or a prepared checkout before class, and identify the tested tag or commit in Luna. A workshop release tag has not yet been established; chart version pins do not pin the repository revision.
+
+If creating a learner-only bundle, include `README.md`, `charts/`, `helm/`, `docs/architecture.md`, `docs/completion-sheet.md`, `docs/cluster-access.md`, `docs/monitoring.md`, `docs/troubleshooting.md`, `scripts/check-ready.sh`, `scripts/test-helm.sh`, `scripts/tests/check_mesh_charts.py`, `scripts/tests/test_bootcamp_app.py`, and `scripts/tests/test_check_ready.py`. Adjust maintainer links and test commands for that bundle; keep the instructor guide and answer key in the instructor distribution. Exclude `.git/`, credentials, private local configuration, Terraform inputs/state/plans, and internal operational logs. Do not change repository visibility as part of preparing lab instructions.
 
 ## Upstream references
 
