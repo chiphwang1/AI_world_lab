@@ -25,7 +25,7 @@ Run commands in a **Bash terminal on the Luna desktop**. Keep session credential
 
 Step 6, pod recovery, is optional: do it only if step 5 is complete by minute 50. Preserve the last five minutes for debrief and delays. Direct Prometheus exploration, controlled outages, and OCI alarms are extension activities outside this hour.
 
-Times are **planning targets, not guaranteed completion times**, counted from the start of hands-on work after the 30-minute lecture. They include reading, editing, commands, waits, and interpretation. Downloads and cloud readiness vary; ask for help when a checkpoint is blocked. Full classroom timing still needs a Luna pilot. The instructor checks provisioning during the lecture, and the cluster must be ready before hands-on work starts.
+Times are **planning targets, not guaranteed completion times**, counted from the start of hands-on work after the 30-minute lecture. They include reading, editing, commands, waits, and interpretation. Downloads and cloud readiness vary; ask for help when a checkpoint is blocked. The cluster must be ready before hands-on work starts.
 
 ## 1. Connect to your prepared cluster — 5 minutes
 
@@ -374,12 +374,6 @@ Under `traffic`, confirm `loadEnabled: false`. The baseline generator remains en
 
 **No manual resource cleanup is required from students.** Leave the application and Helm releases installed. Luna starts automated resource cleanup when the session ends or expires. Stopping CPU load in step 5 is part of observing scale-in, not a cleanup task.
 
-## Instructor notes
-
-Use the [instructor guide](docs/instructor-guide.md) for the lecture schedule, minute-20 readiness check, debrief answers, cold-versus-cached timing, two-worker capacity assessment, and classroom-pilot release gates. It links the measured rehearsal reports and cleanup/CI procedures. Full Luna timing, session-end cleanup, concurrency, the one-hour dashboard soak, and security-scan gates remain to be completed.
-
-`terraform/` and CI scripts are instructor-managed. `charts/` and `helm/` are learner materials; do not mix the legacy `kubernetes/` manifests into this Helm workflow.
-
 ## Appendix A: Troubleshooting
 
 Use only the section that matches your symptom, then return to the lab step where you stopped. These checks are not additional required exercises. For other issues, see the [full troubleshooting guide](docs/troubleshooting.md).
@@ -494,3 +488,5 @@ helm upgrade hello-oke ./charts/oke-mesh-app --namespace oke-lab \
 ```
 
 Then resume step 5. This updates the lab release; it does not remove the cluster or its LoadBalancer. On a first run, follow the main steps without this extra command.
+
+For instructors: [delivery notes, preparation, and release checklist](docs/instructor-guide.md).

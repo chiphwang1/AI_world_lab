@@ -1,5 +1,7 @@
 # Instructor delivery and release guide
 
+This file contains instructor notes, preparation, debrief answers, and release checks. The student walkthrough is [README.md](../README.md).
+
 Plan for **90 minutes: 30 minutes of lecture and cluster provisioning, followed by 60 minutes of hands-on work and debrief**. Cluster creation starts at workshop minute 0, not before the session. Desktop and repository preparation can happen beforehand. Students follow [README.md](../README.md); use the same [architecture diagram](architecture.md) in the lecture.
 
 ## Delivery schedule
@@ -62,7 +64,7 @@ Completion requires the customized public response, mesh traffic, baseline/load/
 
 ## Classroom pilot and release gates
 
-**Not yet completed:** a real beginner's full 90-minute Luna run, session-end cleanup with the full workload, expected classroom concurrency, and a full-hour dashboard refresh test after the Grafana memory fix. Local tests and this checklist do not substitute for those results. The CI scanner-image allowlist blocker also needs resolution before release.
+**Not yet completed:** a real beginner's full 90-minute Luna run, session-end cleanup with the full workload, expected classroom concurrency, a full-hour dashboard refresh test after the Grafana memory fix, and required security scans. Local tests and this checklist do not substitute for those results. The CI scanner-image allowlist blocker also needs resolution before release.
 
 Run the pilot in a separately authorized, disposable Luna session. Do not reset an existing rehearsal cluster or destroy locally tracked infrastructure merely to satisfy this checklist.
 
@@ -100,4 +102,4 @@ The GitHub repository is private and has no established workshop release tag yet
 
 Suggested Luna description: **Build, run, and scale an application on OKE. Cluster creation runs during the opening lecture. Then customize a Helm deployment, expose it through an OCI LoadBalancer, and use Istio, Prometheus, Kiali, and Grafana to observe traffic and scaling. Test manual scaling and CPU-based autoscaling, with optional pod recovery.**
 
-Infrastructure and CI are instructor-managed: [CI administration](gitlab-ci.md), [local Terraform workflow](maintainer-infrastructure.md), and [cleanup](cleanup.md). The legacy `kubernetes/` manifests are not part of the Helm student workflow.
+`terraform/` and CI scripts are instructor-managed; `charts/` and `helm/` contain learner deployment materials. Do not mix the legacy `kubernetes/` manifests into the Helm student workflow. See [CI administration](gitlab-ci.md), [local Terraform workflow](maintainer-infrastructure.md), and [cleanup](cleanup.md).
