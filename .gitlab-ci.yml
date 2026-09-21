@@ -66,14 +66,11 @@ terraform:bootstrap-test:
   before_script:
     - bash scripts/ci-tools.sh terraform
   variables:
-    OKE_RESOURCE_GROUP: oke-lab-test
     OKE_ENVIRONMENT: oke-lab-test
-  resource_group: $OKE_RESOURCE_GROUP
   rules:
     - if: '$LUNA_DEPLOYMENT == "1" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success
       variables:
-        OKE_RESOURCE_GROUP: luna-oke-$CI_PIPELINE_ID
         OKE_ENVIRONMENT: luna/oke-$CI_PIPELINE_ID
     - if: '$LUNA_DEPLOYMENT != "1" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       when: manual
@@ -118,7 +115,6 @@ terraform:destroy:
       when: manual
       allow_failure: true
       variables:
-        OKE_RESOURCE_GROUP: luna-oke-$CI_PIPELINE_ID
         OKE_ENVIRONMENT: luna/oke-$CI_PIPELINE_ID
     - if: '$LUNA_DEPLOYMENT != "1" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       when: manual

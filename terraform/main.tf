@@ -34,6 +34,9 @@ module "oke" {
   vcn_create_internet_gateway = "always"
   create_bastion              = false
   create_operator             = false
+  worker_node_metadata = {
+    areLegacyImdsEndpointsDisabled = "true"
+  }
 
   create_iam_resources = var.create_policies
   # Workload identity is an enhanced-cluster capability, not a module toggle.
