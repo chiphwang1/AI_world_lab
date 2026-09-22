@@ -55,7 +55,7 @@ A downloaded kubeconfig does not establish network access or grant permissions. 
 
 ## Verify the selected file and context
 
-`KUBECONFIG` selects a file; the current context selects an entry inside it. Changing directories does not select a cluster. In each new terminal, set the same kubeconfig path used by the walkthrough:
+`KUBECONFIG` selects a file; the current context selects an entry inside it. Changing directories does not select a cluster. Set `KUBECONFIG` once in each new terminal, using the same path as the walkthrough; no need to repeat the export between commands:
 
 ```bash
 export KUBECONFIG="$HOME/.kube/oke-lab"
@@ -70,7 +70,9 @@ Compare the context with the assignment from the instructor. If the assigned con
 kubectl config use-context '<assigned-context-name-from-the-list>'
 ```
 
-If it is absent, confirm the file path or generate the kubeconfig above. `no context exists` refers to the selected file; the same context may exist in another kubeconfig. After selecting the assigned context, return to the README's read-only preflight check.
+This saves the selection in the kubeconfig. New terminals using that file share the saved context; repeat `use-context` only when you need to switch it. `kubectl config current-context` and the lab preflight check the selection without changing it.
+
+If the assigned context is absent, confirm the file path or generate the kubeconfig above. `no context exists` refers to the selected file; the same context may exist in another kubeconfig. After selecting the assigned context, return to the README's read-only preflight check.
 
 For the maintainer's existing local rehearsal, follow [the rehearsal environment instructions](rehearsal-2026-09-18.md#reuse-and-ongoing-cost). That environment uses a dedicated project kubeconfig; its private files are not distributed to learners. When using that path, use it consistently in the dashboard terminals too.
 

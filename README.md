@@ -14,7 +14,7 @@ This lab assumes you can navigate a terminal, copy commands, and edit a YAML val
 
 Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private.
 
-Materials revision: `lab-2026-09-22.2`. Your checkout and Luna instructions must show this same revision. During each prediction prompt, take 30 seconds to state your answer before continuing; use the following command output to explain whether your prediction held. These pauses are included in the exercise times.
+Materials revision: `lab-2026-09-22.3`. Your checkout and Luna instructions must show this same revision. During each prediction prompt, take 30 seconds to state your answer before continuing; use the following command output to explain whether your prediction held. These pauses are included in the exercise times.
 
 [Download the completion sheet (PDF)](docs/completion-sheet.pdf) for the lab checkpoints. If it opens in your browser, use the PDF viewer's download button to save a copy. You can print it or use the [Markdown version](docs/completion-sheet.md) in your own notes.
 
@@ -44,7 +44,7 @@ Open your assigned Luna session as directed by the instructor. The desktop can a
 In **terminal 1** on your Luna desktop, download the lab repository:
 
 ```bash
-git clone --branch lab-2026-09-22.2 --single-branch \
+git clone --branch lab-2026-09-22.3 --single-branch \
   https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&
   cd "$HOME/oke-bootcamp"
 ```
@@ -89,10 +89,9 @@ kubectl config current-context
 
 ### Check cluster readiness
 
-The walkthrough uses `~/.kube/oke-lab`; substitute the instructor's path **in every terminal** if yours differs. Replace `<instructor-assigned-context>` below with the exact name supplied by the instructor, keeping the quotes:
+Continue in **terminal 1** at the repository root. `KUBECONFIG` is already set in this terminal, and the selected context stays saved in the file until changed. Run this preflight once, replacing `<instructor-assigned-context>` with the exact name supplied by the instructor:
 
 ```bash
-export KUBECONFIG="$HOME/.kube/oke-lab"
 bash scripts/check-ready.sh --context '<instructor-assigned-context>'
 ```
 
@@ -117,22 +116,6 @@ bash scripts/prepare-charts.sh --check
 Expect five `PASS Prepared chart` lines. If a chart is missing or mismatched, ask the instructor to finish preparation. Keep terminal 1 in this directory for lab commands. The Git tag pins the lab files; `helm/versions.env` pins the upstream charts.
 
 **Checkpoint:** confirm the assigned context, two Ready nodes, numeric CPU readings, and available lab files. Explain which file selects your Kubernetes connection and which component supplies CPU metrics.
-
-Run from the repository root in terminal 1. Replace the placeholder with your assigned context. The `&&` operators stop subsequent commands if a check fails; the preflight verifies the assignment before contacting the cluster.
-
-```bash
-export KUBECONFIG="$HOME/.kube/oke-lab"
-LAB_CONTEXT='<instructor-assigned-context>'
-printf 'Kubeconfig: %s\n' "$KUBECONFIG"
-kubectl config current-context &&
-bash scripts/check-ready.sh --context "$LAB_CONTEXT" &&
-kubectl --context "$LAB_CONTEXT" --request-timeout=15s get nodes &&
-kubectl --context "$LAB_CONTEXT" --request-timeout=15s top nodes &&
-ls -ld README.md charts helm scripts &&
-bash scripts/prepare-charts.sh --check
-```
-
-Expect `Preflight passed`, two node rows showing `Ready`, numeric CPU/memory readings for both nodes, the four lab paths, and five `PASS Prepared chart` lines. Stop and ask for help on any failure. A CPU reading such as `125m` means 0.125 CPU core, not a required target.
 
 **Explain:** `KUBECONFIG` points to `~/.kube/oke-lab`; the selected context inside that file identifies the cluster and user. Metrics Server supplies the resource metrics used by `kubectl top` and this lab's HPA; Prometheus supplies the dashboard metrics. See [kubectl top node](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_top/kubectl_top_node/).
 
@@ -239,23 +222,23 @@ kubectl -n oke-lab get pods -l app=hello-oke \
 
 Expect two application replicas with an `istio-proxy` beside the `web` container, normally showing `2/2` containers ready. In this pinned setup, Istio uses a native sidecar: `istio-proxy` appears under `init/sidecars` but keeps running alongside `web`; `istio-init` is a separate setup container that completes. Do not also apply the legacy `kubernetes/` manifests; they use the same application name but are not Helm-managed.
 
-To verify the replicas and inspect both pods without changing them, use the assigned context from step 1:
+To verify the replicas and inspect both pods without changing them, continue in terminal 1 using the context verified in step 1:
 
 ```bash
-kubectl --context "$LAB_CONTEXT" -n oke-lab rollout status deployment/hello-oke --timeout=300s &&
-kubectl --context "$LAB_CONTEXT" -n oke-lab get deployment hello-oke &&
-kubectl --context "$LAB_CONTEXT" -n oke-lab get pods -l app=hello-oke
+kubectl -n oke-lab rollout status deployment/hello-oke --timeout=300s &&
+kubectl -n oke-lab get deployment hello-oke &&
+kubectl -n oke-lab get pods -l app=hello-oke
 
-kubectl --context "$LAB_CONTEXT" -n oke-lab get pods -l app=hello-oke \
+kubectl -n oke-lab get pods -l app=hello-oke \
   -o 'jsonpath={range .items[*]}{.metadata.name}{"\n  app containers: "}{.spec.containers[*].name}{"\n  init/sidecars: "}{.spec.initContainers[*].name}{"\n"}{end}'
 
-kubectl --context "$LAB_CONTEXT" -n oke-lab describe pods -l app=hello-oke
+kubectl -n oke-lab describe pods -l app=hello-oke
 ```
 
 Expect Deployment `READY` to be `2/2` and two application pods, normally each `2/2 Running`. In each pod's description, look for `web` under **Containers** with `State: Running` and `Ready: True`; `istio-proxy` under **Init Containers** with `State: Running` and `Ready: True`; and `istio-init` with `State: Terminated`, `Reason: Completed`, and `Exit Code: 0`. The next command confirms the native sidecar's per-container restart policy:
 
 ```bash
-kubectl --context "$LAB_CONTEXT" -n oke-lab get pods -l app=hello-oke \
+kubectl -n oke-lab get pods -l app=hello-oke \
   -o 'jsonpath={range .items[*]}{.metadata.name}{": istio-proxy restartPolicy="}{.spec.initContainers[?(@.name=="istio-proxy")].restartPolicy}{"\n"}{end}'
 ```
 
@@ -298,7 +281,7 @@ The traffic generator makes one request approximately every two seconds. Leave i
 
 ## 4. Explore traffic in Kiali and Grafana — 7 minutes
 
-Keep **terminal 1** for commands, **terminal 2** for the Kiali port-forward, and **terminal 3** for the Grafana port-forward. Use the same kubeconfig path in each. Open the forwards while baseline traffic accumulates.
+Keep **terminal 1** for commands, **terminal 2** for the Kiali port-forward, and **terminal 3** for the Grafana port-forward. Set `KUBECONFIG` once in each new terminal to use the same file; its context is already selected. If your file path differs, substitute it in each terminal. Open the forwards while baseline traffic accumulates.
 
 ### Kiali: service-to-service traffic
 
@@ -501,7 +484,7 @@ Read the first `FAIL` line and correct that condition before rerunning the same 
 
 ### Fresh-terminal setup errors
 
-If you opened a fresh terminal, change into your existing repository checkout and repeat step 1's kubeconfig/OCI environment setup before continuing. Verify `kubectl config current-context` matches your assigned cluster before any Helm upgrade.
+In a new terminal, return to your existing repository checkout and set the same `KUBECONFIG` and required OCI environment settings. You do not need to regenerate the kubeconfig or reselect an already-correct context. Verify `kubectl config current-context` matches your assigned cluster before continuing.
 
 - `path "./charts/oke-mesh-app" not found`: the relative chart path is wrong for your current directory. Return to the repository root, where `README.md`, `charts/`, and `helm/` are located.
 - Connection refused at `localhost:8080`: usually no usable cluster configuration was selected. Follow [cluster access](docs/cluster-access.md#verify-the-selected-file-and-context); changing directories alone does not select a cluster.

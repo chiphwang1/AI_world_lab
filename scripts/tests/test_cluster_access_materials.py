@@ -57,6 +57,23 @@ class ClusterAccessMaterials(unittest.TestCase):
         self.assertIn("verify an actual Luna session exposes", instructor)
         self.assertIn("browser login alone is insufficient", instructor)
 
+    def test_setup_runs_once_and_new_dashboard_terminals_select_the_same_file(self):
+        readme = (ROOT / "README.md").read_text()
+        core = readme.split("## Appendix A:", 1)[0]
+        export = 'export KUBECONFIG="$HOME/.kube/oke-lab"'
+        self.assertEqual(core.count(export), 3)
+        self.assertEqual(core.split("## 2.", 1)[0].count(export), 1)
+        self.assertEqual(core.count("bash scripts/check-ready.sh --context"), 1)
+        self.assertEqual(core.count("bash scripts/prepare-charts.sh --check"), 1)
+        self.assertNotIn("LAB_CONTEXT", readme)
+        self.assertNotIn("kubectl --context", core)
+        for service, ports in (("kiali", "20001:20001"), ("grafana", "13000:80")):
+            self.assertIn(f"{export}\nkubectl -n istio-system port-forward "
+                          f"--address 127.0.0.1 svc/{service} {ports}", core)
+        self.assertIn("selected context stays saved in the file until changed", readme)
+        access = (ROOT / "docs/cluster-access.md").read_text()
+        self.assertIn("repeat `use-context` only when you need to switch it", access)
+
 
 if __name__ == "__main__":
     unittest.main()
