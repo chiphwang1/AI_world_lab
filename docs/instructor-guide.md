@@ -2,7 +2,7 @@
 
 This file contains instructor notes, preparation, debrief answers, and release checks. The student walkthrough is [README.md](../README.md).
 
-Plan for **90 minutes: 30 minutes of lecture and cluster provisioning, followed by 60 minutes of hands-on work and debrief**. Cluster creation starts at workshop minute 0, not before the session. Desktop and repository preparation can happen beforehand. Students follow [README.md](../README.md); use the same [architecture diagram](architecture.md) in the lecture.
+Plan for **90 minutes: 30 minutes of lecture and cluster provisioning, followed by 60 minutes of hands-on work and debrief**. Cluster creation starts at workshop minute 0, not before the session. Prepare desktops and repository access beforehand; students clone the repository during the lecture. Students follow [README.md](../README.md); use the same [architecture diagram](architecture.md) in the lecture.
 
 ## Published learner handouts
 
@@ -22,7 +22,7 @@ Render and visually inspect both pages before publishing. The builder rejects un
 
 | Workshop minute | Activity or readiness gate |
 |---|---|
-| 0–5 | Start each assigned cluster's provisioning. Introduce the app and learning goals. |
+| 0–5 | Start each assigned cluster's provisioning. Have students clone the repository using README step 1. Introduce the app and learning goals. |
 | 5–15 | Trace requests, dashboard telemetry, and HPA CPU metrics on the shared diagram. |
 | 15–20 | Explain Helm releases, Services, and readiness versus liveness. |
 | 20 | A helper checks provisioning status and identifies sessions needing intervention. Continue the lecture. |
@@ -38,31 +38,29 @@ Only offer pod recovery if core work finishes by lab minute 50. Direct Prometheu
 
 ## Before class and the minute-20 check
 
-Prepare the desktop, repository access, and chart archives before the workshop where possible. Start cluster provisioning at workshop minute 0 as planned, then finish cluster authentication and readiness checks during the lecture. The hands-on clock starts after these checks pass. Never infer the assigned cluster from whatever context happens to be current. See [cluster access](cluster-access.md).
+Prepare the desktop and repository access before the workshop. Download the pinned chart archives in advance where possible, then copy them into each learner's checkout after the learner clones it during the lecture. Start cluster provisioning at workshop minute 0 as planned, then finish chart preparation, cluster authentication, and readiness checks during the lecture. The hands-on clock starts after these checks pass. Never infer the assigned cluster from whatever context happens to be current. See [cluster access](cluster-access.md).
 
 ### One materials revision
 
-Publish the immutable, annotated tag `lab-2026-09-21.1` in both GitLab (Luna's source) and the private GitHub distribution repository before distributing these instructions. Both tags must identify the same commit and pass the remote checks below. A revision printed in the README does not create a release tag. This is a versioned materials release; the classroom pilot and other release gates below remain required. Keep Luna's published GitLab branch at this revision during a workshop, and make later edits on a separate branch. Do not move an existing release tag.
+Publish the immutable, annotated tag `lab-2026-09-22.1` in both GitLab (Luna's source) and the private GitHub distribution repository before distributing these instructions. Both tags must identify the same commit containing these updated instructions and pass the remote checks below. A revision printed in the README does not create a release tag; the student's clone command will fail until that tag is published. This is a versioned materials release; the classroom pilot and other release gates below remain required. Keep Luna's published GitLab branch at this revision during a workshop, and make later edits on a separate branch. Do not move an existing release tag.
 
-Using prearranged repository access, prepare a **new** checkout on each learner desktop before handoff:
+Students download a **new** checkout with the pinned clone command in README step 1. After cloning, verify the revision in their checkout before handoff:
 
 ```bash
-git clone --branch lab-2026-09-21.1 --single-branch \
-  https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp"
 cd "$HOME/oke-bootcamp"
 git describe --tags --exact-match HEAD
 ```
 
-Skip cloning if that folder exists. Inspect its revision and edits; do not reset, pull over, or delete a learner's work. If it is the wrong revision, prepare a separate directory and supply that path. The repository is private: resolve access beforehand, avoid credentials in clone URLs, and do not leave an instructor's Git credentials on a shared desktop. An instructor-distributed checkout must retain Git metadata and the release tag for the student's revision check.
+Expect `lab-2026-09-22.1`. Students skip cloning if that folder exists. Inspect its revision and edits; do not reset, pull over, or delete a learner's work. If it is the wrong revision, prepare a separate directory and supply that path. The repository is private: resolve learner access beforehand, avoid credentials in clone URLs, and do not leave an instructor's Git credentials on a shared desktop. An instructor-distributed checkout must retain Git metadata and the release tag for this revision check.
 
 Before publishing or teaching, compare these remote outputs. Both `refs/heads/main` values and both peeled tag values (`^{}`) must match the selected release commit. Stop on a missing or different value; a successful GitLab push alone does not synchronize GitHub.
 
 ```bash
-git ls-remote origin refs/heads/main 'refs/tags/lab-2026-09-21.1^{}'
-git ls-remote github refs/heads/main 'refs/tags/lab-2026-09-21.1^{}'
+git ls-remote origin refs/heads/main 'refs/tags/lab-2026-09-22.1^{}'
+git ls-remote github refs/heads/main 'refs/tags/lab-2026-09-22.1^{}'
 ```
 
-These remote names apply to the maintainer checkout. Verify Luna displays `Materials revision: lab-2026-09-21.1` and that its PDF/PNG links work. Record the resolved commit on the pilot timing sheet. Do not treat the tag itself as evidence that classroom testing passed.
+These remote names apply to the maintainer checkout. Verify Luna displays `Materials revision: lab-2026-09-22.1` and that its PDF/PNG links work. Record the resolved commit on the pilot timing sheet. Do not treat the tag itself as evidence that classroom testing passed.
 
 A local commit or tag does not update either remote. When publication is approved, review both remotes for newer work, then push the same reviewed commit and annotated tag to both without force. Use an atomic push per remote so its branch and tag update together. If either push fails, stop distribution until both pass the checks above; atomic pushes do not span two repositories.
 
@@ -70,7 +68,9 @@ The README uses full Luna Lab Steps URLs for its appendix links because Luna rew
 
 ### Prepare downloads and terminals
 
-In each prepared checkout, or before copying its non-secret materials to the desktop:
+Before teaching the learner login flow, verify an actual Luna session exposes the **Luna Lab** desktop icon, **OCI Console** quick link, temporary **Credentials**, and **Oracle Cloud → Compartment Name**. Confirm that compartment matches the one supplied to Terraform and that the learner's identity can see the assigned OKE cluster. These are Luna session features, not outputs to implement by exposing passwords in Terraform. Separately verify desktop OCI CLI authentication and cluster access; browser login alone is insufficient. If these session fields are absent, resolve the Luna configuration before handing off the lab.
+
+After a learner clones the repository, run these commands from that checkout before the hands-on clock. Alternatively, copy the matching `.lab-cache/charts/` archives prepared in advance into that checkout, then run `--check` there:
 
 ```bash
 bash scripts/prepare-charts.sh --download
@@ -155,7 +155,7 @@ The [September 18 rehearsal](rehearsal-2026-09-18.md), [September 21 reset/reins
 
 The preflight compatibility check follows the pinned Istio 1.31.x range, Kubernetes 1.32–1.36, and kubectl's one-minor-version skew rule. Review the script and its tests whenever changing these pins. Sources: [Istio supported releases](https://istio.io/latest/docs/releases/supported-releases/) and [kubectl version skew policy](https://kubernetes.io/releases/version-skew-policy/#kubectl).
 
-The private GitHub mirror and GitLab source must publish the same immutable materials tag, `lab-2026-09-21.1`, and matching main-branch commit for Luna. Publish both explicitly, without force-pushing, and verify the remote hashes as described above. Use GitLab's `ci.skip` push option for documentation/materials publication so it does not launch infrastructure jobs; required security scans remain a separate release gate. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
+The private GitHub mirror and GitLab source must publish the same immutable materials tag, `lab-2026-09-22.1`, and matching main-branch commit for Luna. Publish both explicitly, without force-pushing, and verify the remote hashes as described above. Use GitLab's `ci.skip` push option for documentation/materials publication so it does not launch infrastructure jobs; required security scans remain a separate release gate. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
 
 `terraform/` and CI scripts are instructor-managed; `charts/` and `helm/` contain learner deployment materials. Do not mix the legacy `kubernetes/` manifests into the Helm student workflow. See [CI administration](gitlab-ci.md), [local Terraform workflow](maintainer-infrastructure.md), and [cleanup](cleanup.md).
 

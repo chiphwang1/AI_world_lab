@@ -14,7 +14,7 @@ This lab assumes you can navigate a terminal, copy commands, and edit a YAML val
 
 Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private.
 
-Materials revision: `lab-2026-09-21.1`. Your prepared checkout and Luna instructions must show this same revision. During each prediction prompt, take 30 seconds to state your answer before continuing; use the following command output to explain whether your prediction held. These pauses are included in the exercise times.
+Materials revision: `lab-2026-09-22.1`. Your checkout and Luna instructions must show this same revision. During each prediction prompt, take 30 seconds to state your answer before continuing; use the following command output to explain whether your prediction held. These pauses are included in the exercise times.
 
 [Download the completion sheet (PDF)](docs/completion-sheet.pdf) for the lab checkpoints. If it opens in your browser, use the PDF viewer's download button to save a copy. You can print it or use the [Markdown version](docs/completion-sheet.md) in your own notes.
 
@@ -41,16 +41,23 @@ Times are **planning targets, not guaranteed completion times**, counted from th
 
 Open your assigned Luna session as directed by the instructor. The desktop can appear before the cluster is ready. If provisioning is still running or has failed, ask the instructor; do not create a replacement cluster.
 
-The instructor prepares the repository at `~/oke-bootcamp`, chart downloads, and cluster authentication before the hands-on clock. If any are missing, ask for help before starting; cloning repositories and repairing credentials are outside this hour.
+During the introductory lecture, download the lab repository in **terminal 1** on your Luna desktop. Complete this before the 60-minute hands-on clock starts. The repository is private; use the access arranged by your instructor. If Git reports `Repository not found` or an authentication error, ask for help; do not put a password or token in the URL.
 
-In **terminal 1**, enter the prepared checkout and display its revision. Use the instructor's supplied path if it differs:
+For a new checkout, run:
 
 ```bash
-cd "$HOME/oke-bootcamp"
-git describe --tags --exact-match HEAD
+git clone --branch lab-2026-09-22.1 --single-branch \
+  https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&
+  cd "$HOME/oke-bootcamp"
 ```
 
-Expected revision: `lab-2026-09-21.1`. If it differs or Git reports no exact tag, stop and ask the instructor to align the files. Do not run `git pull` or replace a checkout containing your edits. Check your current location:
+`git clone` downloads the lab files into `~/oke-bootcamp`; `--branch` selects the lab release. The `cd` command runs only if cloning succeeds. A Git message about a detached HEAD is expected when cloning a release tag and does not prevent editing the lab files.
+
+If `~/oke-bootcamp` already exists, skip the clone and enter that folder with `cd "$HOME/oke-bootcamp"`. If you are already in it, skip both commands. Ask the instructor to confirm its revision; do not delete the folder or run `git pull` over existing edits. Use the instructor's supplied path if it differs.
+
+The instructor finishes chart-download and cluster-authentication preparation before hands-on work starts. A fresh clone does **not** include the chart archives in `.lab-cache/charts/`; ask the instructor to prepare them in your new checkout before proceeding.
+
+Check your current location:
 
 ```bash
 pwd
@@ -59,9 +66,60 @@ ls
 
 If `ls` shows `README.md`, `charts`, `helm`, and `scripts`, you are in the repository root. Do not run `cd oke-bootcamp` again; that would look for another folder inside it.
 
-The instructor supplies your assigned cluster name, region, compartment, expected context, and prepared OCI CLI identity. You obtain your own kubeconfig using [Console-based cluster access setup](docs/cluster-access.md). In the OCI Console, select the assigned cluster, then **Actions → Access cluster → Local Access**. Run the supplied `oci ce cluster create-kubeconfig` command in your Luna desktop terminal, using `--file "$HOME/.kube/oke-lab"` and the assigned OCI profile as explained in the access guide. “Local” means the Luna desktop, not your personal laptop. This writes connection settings for the existing cluster; it does not provision a cluster. Complete this during the lecture's setup demonstration where possible.
+### Find your lab login and compartment
 
-A **kubeconfig** defines cluster connections and authentication; a **context** selects a cluster and user. `KUBECONFIG` selects the file independently of your directory. If a browser download is required, follow the access guide's Cloud Shell alternative; downloading a file does not configure local OCI credentials. Never copy an instructor's keys or tokens. See [Oracle's access instructions](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm).
+Obtain your own kubeconfig using your temporary Luna account. Complete this setup during the lecture demonstration where possible, once your cluster is ready.
+
+1. On your running Luna virtual desktop, double-click the **Luna Lab** icon.
+2. On the Luna Lab page, click the **OCI Console** quick link. Sign in using the temporary username and password shown under **Credentials**. Keep these credentials private; do not paste them into terminal commands, screenshots, or Git files.
+3. Return to the Luna Lab page and open **Oracle Cloud**. Find **Compartment Name** and note it for the cluster selection below. You do not need to inspect Terraform logs to find your login or compartment.
+
+If the icon, quick link, credentials, or compartment information is missing, stop and ask the instructor to check your Luna session. Do not substitute a personal account or another learner's credentials. Oracle documents this flow in its [Luna login and compartment instructions](https://docs.oracle.com/en/learn/build-cloud-native-java-applications-with-micronaut-and-graalvm/lab1/configure-db-access.html); only the login steps apply here, not that tutorial's database exercises.
+
+### Open your own cluster in the OCI Console
+
+The instructor confirms your assigned region, cluster name, expected context, and desktop OCI CLI profile. Use the compartment you found on the Luna Lab page.
+
+1. In the OCI Console, select your assigned **region** and open **Kubernetes Clusters (OKE)**.
+2. In the compartment selector, choose the **Compartment Name** shown for your Luna session.
+3. Click **your assigned cluster's name** to open its details page. Compare its name and OCID with the instructor's assignment before continuing. If the cluster is absent, still provisioning, or ambiguous, ask for help; do not choose another cluster.
+
+   **Example page only—not a shared student cluster:** [OKE cluster details in Phoenix](https://cloud.oracle.com/containers/clusters/ocid1.cluster.oc1.phx.aaaaaaaa5mwgyqarbllvk7xavr2qkvipop7ihd6i4i5vejaoxctcyaybtyaq?region=us-phoenix-1). This link identifies one specific cluster. Use the equivalent page for **your own cluster**, not the example's OCID. Your region may also differ.
+
+   Your cluster details URL has this form; replace both placeholders if constructing it manually:
+
+   ```text
+   https://cloud.oracle.com/containers/clusters/<your-cluster-ocid>?region=<your-region>
+   ```
+
+4. On your cluster's details page, open **Actions → Access cluster → Local Access**. “Local” means the terminal on your Luna desktop, not your personal laptop.
+5. Copy the displayed `oci ce cluster create-kubeconfig` command for use in the next step. Keep **your cluster's** OCID, region, and approved endpoint; do not use the example page's values.
+
+### Generate your kubeconfig in the Luna terminal
+
+**Prerequisite:** the instructor must have prepared working OCI CLI authentication and cluster permissions on your Luna desktop. Signing in to the Console does **not** authenticate the terminal. If CLI credentials are missing or expired, ask for help; do not create new keys or enter your Console password into the command.
+
+In **terminal 1**, prepare the destination:
+
+```bash
+export KUBECONFIG="$HOME/.kube/oke-lab"
+umask 077
+mkdir -p "$HOME/.kube"
+```
+
+Run the command you copied from **Local Access**, changing its `--file` value to `"$HOME/.kube/oke-lab"`. Use the assigned desktop OCI profile and authentication settings from [Generate your kubeconfig on the desktop](docs/cluster-access.md#generate-your-kubeconfig-on-the-desktop). Do not add `--overwrite`. The command saves connection settings for the existing cluster; it does not create a cluster or a login account.
+
+After that command succeeds, protect the file and display its contexts:
+
+```bash
+chmod 600 "$KUBECONFIG"
+kubectl config get-contexts
+kubectl config current-context
+```
+
+A **kubeconfig** defines cluster connections and authentication; a **context** selects a cluster and user. `KUBECONFIG` selects the file independently of your directory. Confirm the current context matches the instructor's assignment before the preflight below. If it differs, follow [context selection](docs/cluster-access.md#verify-the-selected-file-and-context); do not assume the first context is correct. See [Oracle's cluster access instructions](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm).
+
+The Console supplies a command, not a direct kubeconfig download button on the cluster details page. If a browser download is specifically required, use the [Cloud Shell download alternative](docs/cluster-access.md#alternative-browser-download-through-cloud-shell). That file still needs working OCI CLI credentials on the Luna desktop.
 
 The walkthrough uses `~/.kube/oke-lab`; substitute the instructor's path **in every terminal** if yours differs. Replace `<instructor-assigned-context>` below with the exact name supplied by the instructor, keeping the quotes:
 

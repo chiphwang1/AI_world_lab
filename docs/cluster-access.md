@@ -2,13 +2,15 @@
 
 Use this page to obtain your own kubeconfig using the OCI Console, or if selecting the cluster fails. Cluster creation is completed before the student lab. Complete access setup during the lecture demonstration where possible and return to [step 1](../README.md#1-connect-to-your-prepared-cluster--5-minutes) once access works.
 
-## Start in the OCI Console
+## Start with your Luna session
 
-In the browser inside your Luna desktop, sign in with the assigned student account, select the assigned region, and open **Kubernetes Clusters (OKE)**. Select the assigned compartment and cluster; verify its name and OCID against your assignment. Open **Actions → Access cluster → Local Access**. Copy the displayed command's cluster OCID and region into the example below, and run it in the **Luna desktop's Bash terminal**. The Console provides a command to generate the file, not a portable login credential. The OCI CLI identity must already be configured on that desktop. See [Oracle's cluster access guide](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm).
+Follow [Find your lab login and compartment](../README.md#find-your-lab-login-and-compartment): open the **Luna Lab** desktop icon, use the **OCI Console** quick link and temporary **Credentials**, and find **Compartment Name** under **Oracle Cloud**. Missing login/session details require instructor help, not Terraform-log inspection or a new personal account.
+
+In the Console, select the assigned region, open **Kubernetes Clusters (OKE)**, and select that compartment and your assigned cluster. Verify its name and OCID. Open **Actions → Access cluster → Local Access** and copy the displayed command's cluster OCID and region into the example below. Run it in the **Luna desktop's Bash terminal**. Console login does not authenticate this terminal; its OCI CLI identity must already be configured. See [Oracle's cluster access guide](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm).
 
 ## Generate your kubeconfig on the desktop
 
-Obtain the current session's cluster OCID, region, expected cluster name, and OCI profile from the instructor. An OCID is OCI's resource identifier. API credentials should already be configured in `~/.oci/config`; do not generate new keys for this exercise. `DEFAULT` is appropriate only if the instructor confirms it identifies this session.
+Use the cluster OCID and region from your assigned cluster's Console access command. An OCID is OCI's resource identifier. Confirm the expected cluster name and desktop OCI profile with the instructor. API credentials should already be configured in `~/.oci/config`; do not generate new keys for this exercise. `DEFAULT` is appropriate only if the instructor confirms it identifies this session.
 
 Replace the three placeholders below before running. This example uses the lab's API-key authentication and public Kubernetes endpoint:
 
@@ -74,7 +76,7 @@ For the maintainer's existing local rehearsal, follow [the rehearsal environment
 
 ## Optional extension: discover the cluster with OCI CLI
 
-This is outside the 60-minute core workflow. The instructor should supply the cluster OCID or a working kubeconfig so students can skip discovery. For a separate OCI discovery exercise, obtain the session's compartment OCID, region, and profile, then list all pages:
+This is outside the 60-minute core workflow. The main walkthrough obtains the assigned cluster OCID through the Console, so students can skip CLI discovery. For a separate OCI discovery exercise, obtain the session's compartment OCID, region, and profile, then list all pages:
 
 ```bash
 export LAB_REGION='<your-session-region>'

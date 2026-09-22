@@ -39,7 +39,12 @@ class LabMaterials(unittest.TestCase):
             with self.subTest(file=name):
                 self.assertEqual(set(re.findall(r"lab-\d{4}-\d{2}-\d{2}\.\d+",
                                                (ROOT / name).read_text())), {revision})
-        self.assertNotIn("git clone", readme)
+        self.assertIn(f"git clone --branch {revision} --single-branch", readme)
+        self.assertIn('https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&\n'
+                      '  cd "$HOME/oke-bootcamp"', readme)
+        self.assertNotIn("git describe --tags --exact-match HEAD", readme)
+        self.assertIn("already exists, skip the clone", readme)
+        self.assertIn("A fresh clone does **not** include the chart archives", readme)
         self.assertIn("bash scripts/prepare-charts.sh --check", readme)
         self.assertNotIn("scripts/prepare-charts.sh --download", readme)
 
