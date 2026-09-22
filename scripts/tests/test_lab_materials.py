@@ -43,10 +43,17 @@ class LabMaterials(unittest.TestCase):
         self.assertIn('https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&\n'
                       '  cd "$HOME/oke-bootcamp"', readme)
         self.assertNotIn("git describe --tags --exact-match HEAD", readme)
-        self.assertIn("already exists, skip the clone", readme)
-        self.assertIn("A fresh clone does **not** include the chart archives", readme)
         self.assertIn("bash scripts/prepare-charts.sh --check", readme)
         self.assertNotIn("scripts/prepare-charts.sh --download", readme)
+
+    def test_repository_download_is_one_instruction_and_command(self):
+        readme = (ROOT / "README.md").read_text()
+        instruction = "In **terminal 1** on your Luna desktop, download the lab repository:"
+        section = readme.split(instruction, 1)[1].split("### Find your lab login and compartment", 1)[0]
+        blocks = re.findall(r"```bash\n(.*?)```", section, re.S)
+        self.assertEqual(len(blocks), 1)
+        self.assertTrue(blocks[0].startswith("git clone --branch "))
+        self.assertEqual(re.sub(r"```bash\n.*?```", "", section, flags=re.S).strip(), "")
 
     def test_bash_blocks_parse_and_local_links_resolve(self):
         for path in (ROOT / "README.md", *sorted((ROOT / "docs").glob("*.md")), ROOT / "helm/README.md"):
