@@ -17,9 +17,9 @@ Grafana is installed in step 2 of the main walkthrough and opened in step 4. It 
 
 ```bash
 source helm/versions.env
-helm upgrade --install grafana grafana \
-  --repo https://grafana-community.github.io/helm-charts \
-  --namespace istio-system --version "$GRAFANA_CHART_VERSION" \
+bash scripts/prepare-charts.sh --check
+helm upgrade --install grafana ".lab-cache/charts/grafana-${GRAFANA_CHART_VERSION}.tgz" \
+  --namespace istio-system \
   -f helm/values/grafana.yaml \
   --set-file dashboards.default.oke-lab.json=helm/dashboards/oke-lab.json \
   --wait --timeout 10m
@@ -28,15 +28,17 @@ kubectl -n istio-system port-forward --address 127.0.0.1 svc/grafana 13000:80
 
 Open **http://127.0.0.1:13000/d/oke-lab** on the same workstation. The **OKE Lab — Traffic & Scaling** dashboard refreshes every 15 seconds and shows request rate, success rate, latency, response codes, application proxy count, and Istiod scrape health. Use a 30-minute time range to see the load test and scale-in together. No login is required for Viewer access. This setting is only for the disposable lab: the Service is reachable within the cluster, so never expose it using a public LoadBalancer, Ingress, or `--address 0.0.0.0`.
 
-The dashboard is provisioned from `helm/dashboards/oke-lab.json`; do not edit a temporary UI copy. Grafana storage is ephemeral, and Prometheus retains only two hours of metrics (lost earlier if its pod is replaced). Proxy count is an observation of successful scrapes, **not** an HPA desired/current replica metric. Follow the load commands below and compare Grafana with `kubectl -n oke-lab get hpa`.
+The dashboard is provisioned from `helm/dashboards/oke-lab.json`; do not edit a temporary UI copy. Grafana storage is ephemeral, and Prometheus retains only two hours of metrics (lost earlier if its pod is replaced). Proxy count is an observation of successful scrapes, **not** an HPA desired/current replica metric. Follow the load commands below and compare Grafana with `kubectl -n oke-lab get hpa hello-oke` after enabling the HPA.
+
+The four summary cards use instant queries evaluated at the end of the selected time range. Keep that range ending at **now**. Graphs retain range queries for history. Missing or undefined results display **No data**, rather than an earlier non-null value from the graph window. Scrape and rate windows still introduce delay; an instant query is not a live readiness test. See [Grafana query types](https://grafana.com/docs/grafana/latest/datasources/prometheus/query-editor/#type).
 
 Ignore the chart's generic administrator-login instructions; the lab uses anonymous Viewer access. Grafana's revised memory request/limit are 512Mi/1Gi, with a `512MiB` soft Go runtime target to leave process headroom. If browser access repeatedly fails, inspect [restart and memory evidence](troubleshooting.md#grafana-memory-and-repeated-restarts) rather than repeatedly opening new forwards.
 
 ## Compare baseline, load, and recovery
 
-During the walkthrough's Scale exercise, record Grafana request rate, latency, success rate, and proxy count before load, during `/work` traffic, and after returning to baseline. Compare with Kiali's traffic graph and the actual HPA replica count. Use `kubectl top pods --containers` and `kubectl describe hpa hello-oke` for CPU and scaling evidence; neither dashboard is the HPA's metric source.
+During the walkthrough's Scale exercise, record Grafana request rate, latency, success rate, and proxy count before load, during `/work` traffic, and after returning to baseline. Compare with Kiali's traffic graph and the actual HPA replica count. Use `kubectl -n oke-lab top pods --containers` and `kubectl -n oke-lab describe hpa hello-oke` for CPU and scaling evidence; neither dashboard is the HPA's metric source.
 
-Use the observation table in step 4 and record the same latency statistic (p95) each time. Baseline requests call `/`, while the burst calls the more expensive `/work`. The generator maintains two concurrent streams rather than a fixed request rate. Explain changes in workload and replicas together; comparing those phases alone does not isolate autoscaling's effect on latency. If a panel has no data, record that instead of zero.
+Use the observation table on the [completion sheet](completion-sheet.pdf) linked from step 4, and record the same latency statistic (p95) each time. Baseline requests call `/`, while the burst calls the more expensive `/work`. The generator maintains two concurrent streams rather than a fixed request rate. Explain changes in workload and replicas together; comparing those phases alone does not isolate autoscaling's effect on latency. If a panel has no data, record that instead of zero.
 
 Deleting one pod during Recover tests the Deployment controller's self-healing. It does not guarantee a visible outage: other replicas can continue serving requests. Use the optional exercise below only if you want to see a deliberate complete loss of application endpoints.
 
@@ -58,7 +60,7 @@ sum(rate(istio_requests_total{reporter="destination",destination_workload_namesp
 count(up{job="istio-workloads",namespace="oke-lab",pod=~"hello-oke-[a-f0-9]+-.*"} == 1)
 ```
 
-The first graph shows inbound requests/second. The second counts successfully scraped application proxies, excluding the traffic generator. It is a useful scaling visualization, not a readiness or HPA metric: scrape discovery can lag pod changes. This lightweight Prometheus configuration does not install kube-state-metrics; use `kubectl get hpa` for authoritative HPA current/desired replicas and CPU utilization. The HPA uses Metrics Server, not Prometheus.
+The first graph shows inbound requests/second. The second counts successfully scraped application proxies, excluding the traffic generator. It is a useful scaling visualization, not a readiness or HPA metric: scrape discovery can lag pod changes. This lightweight Prometheus configuration does not install kube-state-metrics; use `kubectl -n oke-lab get hpa hello-oke` and `kubectl -n oke-lab describe hpa hello-oke` for HPA replica status and CPU utilization after enabling it. The HPA uses Metrics Server, not Prometheus.
 
 For scrape health, use Table with `up{job=~"istiod|istio-workloads"}`; current targets should return `1`. In Kiali, check Mesh for the control plane, Workloads → `hello-oke` for health and pods, and its Envoy tab for service routing configuration. A warning during scale-out may clear after readiness and traffic recover; inspect its details rather than assuming every Degraded badge is a readiness issue.
 

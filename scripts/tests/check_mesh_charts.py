@@ -45,6 +45,31 @@ class AppCharts(unittest.TestCase):
         self.assertIn('pod=~"hello-oke-[a-f0-9]+-.*"', count_panel["targets"][0]["expr"])
         self.assertIn("not HPA", dashboard["description"])
 
+    def test_summary_cards_do_not_reduce_historical_values(self):
+        dashboard = json.loads((ROOT / "helm/dashboards/oke-lab.json").read_text())
+        stats = [p for p in dashboard["panels"] if p["type"] == "stat"]
+        self.assertEqual(len(stats), 4)
+        for panel in stats:
+            with self.subTest(panel=panel["title"]):
+                self.assertEqual(panel["options"]["reduceOptions"]["calcs"], ["last"])
+                self.assertEqual(panel["options"]["graphMode"], "none")
+                defaults = panel["fieldConfig"]["defaults"]
+                self.assertEqual(defaults["noValue"], "No data")
+                self.assertIn({"type": "special", "options": {
+                    "match": "nan", "result": {"text": "No data"}}}, defaults["mappings"])
+                for target in panel["targets"]:
+                    self.assertTrue(target["instant"])
+                    self.assertFalse(target["range"])
+                    self.assertNotIn("or vector(0)", target["expr"])
+        graphs = [p for p in dashboard["panels"] if p["type"] == "timeseries"]
+        self.assertEqual(len(graphs), 4)
+        for panel in graphs:
+            for target in panel["targets"]:
+                self.assertTrue(target["range"])
+                self.assertFalse(target.get("instant", False))
+        scaling = next(p for p in graphs if p["id"] == 7)
+        self.assertIn("not a required peak", scaling["description"])
+
     def test_default_app_and_service_match(self):
         docs = render("hello-oke", "./charts/oke-mesh-app")
         self.assertEqual(len(docs), 3)

@@ -19,7 +19,7 @@ My customized response message: __________
 
 ## Observations
 
-Use Grafana's **Last 30 minutes** range and p95 latency for each row. Record HPA replicas with `kubectl get hpa` and Ready app pods with `kubectl get pods`; the Grafana proxy count is not a readiness check. Write `no data` if a panel is empty, rather than treating it as zero.
+Use Grafana's **Last 30 minutes** range and p95 latency for each row. Run `kubectl -n oke-lab get hpa hello-oke` after enabling the HPA, and `kubectl -n oke-lab get pods -l app=hello-oke` for Ready app pods. Proxy count does not measure readiness. Record `no data` for an empty panel.
 
 | Phase | HPA replicas / Ready app pods | Requests/s | Success % | p95 latency (ms) | App proxies up |
 |---|---|---|---|---|---|

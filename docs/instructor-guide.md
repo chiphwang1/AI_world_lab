@@ -38,7 +38,50 @@ Only offer pod recovery if core work finishes by lab minute 50. Direct Prometheu
 
 ## Before class and the minute-20 check
 
-Before class, test the actual learner Bash terminal, private-repository access, OCI authentication, and chart downloads. Provide a tested repository commit/tag, the assigned context name, and a prepared kubeconfig path, preferably `~/.kube/oke-lab`. Never infer the intended target from whatever context happens to be current. Arrange the cluster-level Helm installation permissions; students do not need to run RBAC capability checks. See [cluster access](cluster-access.md).
+Prepare the desktop, repository access, and chart archives before the workshop where possible. Start cluster provisioning at workshop minute 0 as planned, then finish cluster authentication and readiness checks during the lecture. The hands-on clock starts after these checks pass. Never infer the assigned cluster from whatever context happens to be current. See [cluster access](cluster-access.md).
+
+### One materials revision
+
+Publish the immutable, annotated tag `lab-2026-09-21.1` in both GitLab (Luna's source) and the private GitHub distribution repository before distributing these instructions. Both tags must identify the same commit and pass the remote checks below. A revision printed in the README does not create a release tag. This is a versioned materials release; the classroom pilot and other release gates below remain required. Keep Luna's published GitLab branch at this revision during a workshop, and make later edits on a separate branch. Do not move an existing release tag.
+
+Using prearranged repository access, prepare a **new** checkout on each learner desktop before handoff:
+
+```bash
+git clone --branch lab-2026-09-21.1 --single-branch \
+  https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp"
+cd "$HOME/oke-bootcamp"
+git describe --tags --exact-match HEAD
+```
+
+Skip cloning if that folder exists. Inspect its revision and edits; do not reset, pull over, or delete a learner's work. If it is the wrong revision, prepare a separate directory and supply that path. The repository is private: resolve access beforehand, avoid credentials in clone URLs, and do not leave an instructor's Git credentials on a shared desktop. An instructor-distributed checkout must retain Git metadata and the release tag for the student's revision check.
+
+Before publishing or teaching, compare these remote outputs. Both `refs/heads/main` values and both peeled tag values (`^{}`) must match the selected release commit. Stop on a missing or different value; a successful GitLab push alone does not synchronize GitHub.
+
+```bash
+git ls-remote origin refs/heads/main 'refs/tags/lab-2026-09-21.1^{}'
+git ls-remote github refs/heads/main 'refs/tags/lab-2026-09-21.1^{}'
+```
+
+These remote names apply to the maintainer checkout. Verify Luna displays `Materials revision: lab-2026-09-21.1` and that its PDF/PNG links work. Record the resolved commit on the pilot timing sheet. Do not treat the tag itself as evidence that classroom testing passed.
+
+A local commit or tag does not update either remote. When publication is approved, review both remotes for newer work, then push the same reviewed commit and annotated tag to both without force. Use an atomic push per remote so its branch and tag update together. If either push fails, stop distribution until both pass the checks above; atomic pushes do not span two repositories.
+
+The README uses full Luna Lab Steps URLs for its appendix links because Luna rewrites bare `#heading` links into invalid GitLab file requests. Keep those URLs aligned with this lab ID and the target headings. Check at least one appendix jump in the browser after publication; offline readers can scroll to the named heading.
+
+### Prepare downloads and terminals
+
+In each prepared checkout, or before copying its non-secret materials to the desktop:
+
+```bash
+bash scripts/prepare-charts.sh --download
+bash scripts/prepare-charts.sh --check
+```
+
+The first command downloads the five pinned upstream chart archives into `.lab-cache/charts/`; the second checks their names and versions without downloads or cluster calls. Matching existing archives are reused, and mismatched files are left untouched for investigation. Students install these local archives with Helm. No releases are preinstalled by this script. See [Helm pull](https://helm.sh/docs/helm/helm_pull/) and [installing from an archive](https://helm.sh/docs/helm/helm_upgrade/).
+
+The ignored chart cache must be prepared separately for every desktop or included in the prepared learner bundle. It contains no container images. Newly created workers still need registry access; if an approved image-prepull process is used, measure it during the provisioning window after workers exist and record which images were cached. Do not deploy student releases merely to warm the cache, or count warm upgrades as first installs.
+
+Verify the actual Bash-resolved OCI CLI, kubectl, Helm, Git, and curl. Prepare the assigned context and `~/.kube/oke-lab`, with the correct OCI profile/authentication and any required environment settings in **each fresh terminal**. Arrange Helm install permissions separately; students do not troubleshoot credentials or permissions during the hour. Open three labeled Bash terminals (commands, Kiali, Grafana), the student values file in the editor, and the completion sheet. Do not start dashboard forwards until their Services exist.
 
 At workshop minute 20:
 
@@ -49,10 +92,10 @@ At workshop minute 20:
    bash scripts/check-ready.sh --context '<instructor-assigned-context>'
    ```
 
-3. Check the managed Cert Manager and Metrics Server add-ons are healthy and that permissions and image access have been validated. The script checks repository files, tool presence, selected context, API authentication, version compatibility, two Ready/non-cordoned workers, and numeric node metrics. It does **not** prove chart downloads, Helm install permissions, all scheduling constraints, or future LoadBalancer availability.
+3. Check the managed Cert Manager and Metrics Server add-ons are healthy and that permissions and image access have been validated. Confirm the materials revision and `prepare-charts.sh --check` in the learner's checkout. The cluster preflight does **not** prove Helm install permissions, all scheduling constraints, or future LoadBalancer availability.
 4. Resolve missing authentication, old binaries, add-on readiness, or failed provisioning before minute 30. Re-run preflight in a fresh learner terminal. Do not silently switch a learner to another person's or a production cluster.
 
-Prepare chart downloads before the hands-on clock. Newly created workers do not inherit the rehearsal cluster's cached images; if pre-pulling is part of classroom preparation, measure it within the provisioning window once workers exist. Keep the student Helm installations visible. Do not count an already-deployed release's upgrade time as first-install time.
+Protect the observation and debrief blocks. Use installation waits for the architecture discussion and the five-minute load burst for the metrics-source explanation. If setup runs late, send a helper to resolve it; do not replace the learner's interpretation time with more setup commands or silently mark missing observations complete. Keep the last five minutes for debrief and skip optional recovery when behind.
 
 If a cluster cannot be ready at minute 30, use an already authorized, dedicated spare if one is available. Otherwise use an instructor demonstration and record that learner as **demonstration only**, not completed. Starting their full lab late cannot preserve the 90-minute limit. Provisioning inside 30 minutes remains a release requirement to validate, not a promise established by local rehearsal.
 
@@ -60,7 +103,9 @@ Keep two workers for this tested per-learner workload. Validate allocatable capa
 
 ## Debrief answer guide
 
-Use the [completion sheet](completion-sheet.md) to assess both observations and explanations. Do not require a peak of six replicas or invent readings for missing panels.
+Use the [completion sheet](completion-sheet.md) to assess both observations and explanations. At each prediction, wait about 30 seconds before giving the explanation: students state or write a prediction, inspect the existing output, then explain the result to a partner or instructor. Ask "Which value supports that?" before correcting an answer. Use the existing install/load waits and checkpoint time; do not add another quiz. Do not require a peak of six replicas or invent readings for missing panels.
+
+Listen for a reason, not only a correct tool name. For example, a learner should connect HPA CPU input to Metrics Server and identify a request-rate or latency reading supplied by Prometheus. For the Running/Ready question, let the learner distinguish traffic eligibility from restart behavior before confirming that a Running pod can be unready with zero restarts. Reveal the answer guide after the learner has attempted the explanation.
 
 | Prompt | What a successful explanation includes |
 |---|---|
@@ -110,7 +155,7 @@ The [September 18 rehearsal](rehearsal-2026-09-18.md), [September 21 reset/reins
 
 The preflight compatibility check follows the pinned Istio 1.31.x range, Kubernetes 1.32–1.36, and kubectl's one-minor-version skew rule. Review the script and its tests whenever changing these pins. Sources: [Istio supported releases](https://istio.io/latest/docs/releases/supported-releases/) and [kubectl version skew policy](https://kubernetes.io/releases/version-skew-policy/#kubectl).
 
-The GitHub repository is private and has no established workshop release tag yet. Arrange access or a prepared checkout and record a tested commit/tag before distribution. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
+The private GitHub mirror and GitLab source must publish the same immutable materials tag, `lab-2026-09-21.1`, and matching main-branch commit for Luna. Publish both explicitly, without force-pushing, and verify the remote hashes as described above. Use GitLab's `ci.skip` push option for documentation/materials publication so it does not launch infrastructure jobs; required security scans remain a separate release gate. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
 
 `terraform/` and CI scripts are instructor-managed; `charts/` and `helm/` contain learner deployment materials. Do not mix the legacy `kubernetes/` manifests into the Helm student workflow. See [CI administration](gitlab-ci.md), [local Terraform workflow](maintainer-infrastructure.md), and [cleanup](cleanup.md).
 
