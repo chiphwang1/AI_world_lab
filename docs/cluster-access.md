@@ -1,8 +1,12 @@
 # Access your assigned OKE cluster
 
-Use this page if your instructor has not prepared a working kubeconfig, or if selecting the cluster fails. Cluster creation is completed before the student lab. Return to [step 1](../README.md#1-connect-to-your-prepared-cluster--5-minutes) once access works.
+Use this page to obtain your own kubeconfig using the OCI Console, or if selecting the cluster fails. Cluster creation is completed before the student lab. Complete access setup during the lecture demonstration where possible and return to [step 1](../README.md#1-connect-to-your-prepared-cluster--5-minutes) once access works.
 
-## Generate a kubeconfig only when needed
+## Start in the OCI Console
+
+In the browser inside your Luna desktop, sign in with the assigned student account, select the assigned region, and open **Kubernetes Clusters (OKE)**. Select the assigned compartment and cluster; verify its name and OCID against your assignment. Open **Actions → Access cluster → Local Access**. Copy the displayed command's cluster OCID and region into the example below, and run it in the **Luna desktop's Bash terminal**. The Console provides a command to generate the file, not a portable login credential. The OCI CLI identity must already be configured on that desktop. See [Oracle's cluster access guide](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm).
+
+## Generate your kubeconfig on the desktop
 
 Obtain the current session's cluster OCID, region, expected cluster name, and OCI profile from the instructor. An OCID is OCI's resource identifier. API credentials should already be configured in `~/.oci/config`; do not generate new keys for this exercise. `DEFAULT` is appropriate only if the instructor confirms it identifies this session.
 
@@ -13,16 +17,39 @@ export LAB_REGION='<your-session-region>'
 export LAB_CLUSTER_OCID='<your-assigned-cluster-ocid>'
 export LAB_OCI_PROFILE='<your-session-profile>'
 export KUBECONFIG="$HOME/.kube/oke-lab"
+umask 077
 mkdir -p "$HOME/.kube"
 oci ce cluster create-kubeconfig --cluster-id "$LAB_CLUSTER_OCID" \
   --region "$LAB_REGION" --file "$KUBECONFIG" \
   --token-version 2.0.0 --kube-endpoint PUBLIC_ENDPOINT \
-  --profile "$LAB_OCI_PROFILE" --auth api_key --with-auth-context
+  --profile "$LAB_OCI_PROFILE" --auth api_key --with-auth-context &&
+chmod 600 "$KUBECONFIG"
 ```
 
 This writes connection settings for an existing cluster. `--file` selects the destination, and `--with-auth-context` preserves the selected profile and authentication mode for later token generation. If the file already contains contexts, Oracle's command merges the cluster details and selects the added context. Do not add `--overwrite`. See [Oracle's kubeconfig command reference](https://docs.oracle.com/en-us/iaas/tools/oci-cli/latest/oci_cli_docs/cmdref/ce/cluster/create-kubeconfig.html) and [cluster access guide](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm).
 
 If your instructor supplies a different OCI config-file location, use that `OCI_CLI_CONFIG_FILE` setting in **every** new terminal. `--with-auth-context` preserves profile/auth choices, not a custom config-file location. Keep OCI CLI installed and credentials available: the kubeconfig invokes `oci ce cluster generate-token` automatically when Kubernetes tools need authentication. You do not run or copy that token yourself.
+
+## Alternative: browser download through Cloud Shell
+
+Skip this if you generated the file on the desktop above. In the assigned cluster's **Access cluster** dialog, select **Cloud Shell Access → Launch Cloud Shell**. Cloud Shell is a separate machine with its own pre-authenticated OCI CLI.
+
+Run `umask 077`, then run the Console's `create-kubeconfig` command in Cloud Shell with its assigned OCID/region/endpoint, changing only `--file` to `"$HOME/oke-lab-kubeconfig"`. Use a new filename if it already exists. Do not add the desktop's API-key/profile flags or `--with-auth-context`: Cloud Shell authentication settings must not be embedded for desktop use.
+
+Open the Cloud Shell menu at the top left, choose **Download**, enter `oke-lab-kubeconfig`, and click **Download**. Use the browser inside the Luna desktop so the download lands there. Then, in a **desktop terminal**:
+
+```bash
+mkdir -p "$HOME/.kube"
+cp -i "$HOME/Downloads/oke-lab-kubeconfig" "$HOME/.kube/oke-lab"
+chmod 600 "$HOME/.kube/oke-lab"
+export KUBECONFIG="$HOME/.kube/oke-lab"
+export OCI_CLI_PROFILE='<your-session-profile>'
+export OCI_CLI_AUTH=api_key
+```
+
+Adjust the source path if the browser used another download directory. If prompted to overwrite a file, answer **no** and ask the instructor which file to retain. File transfers do not preserve permissions. Set the profile/auth variables in **every new desktop terminal** for this alternative, plus the instructor's `OCI_CLI_CONFIG_FILE` if needed. These use the lab's existing desktop credentials; never copy Cloud Shell's `/etc/oci` credentials. See [Oracle's Cloud Shell download and authentication instructions](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/devcloudshellgettingstarted.htm).
+
+A downloaded kubeconfig does not establish network access or grant permissions. A private endpoint requires an instructor-provided private network path; even a public endpoint may restrict source addresses. Do not change endpoint/firewall settings or create credentials to bypass a connection failure.
 
 ## Verify the selected file and context
 
@@ -66,7 +93,7 @@ Match the name to your assignment and confirm `ACTIVE`. Do not choose another le
 |---|---|---|
 | `oci --version` | Check the installed CLI | Optional diagnostic; instructor desktop preflight |
 | `oci ce cluster list` | Discover an assigned cluster ID | Instructor setup or optional extension outside the hour; also required by cleanup's independent existence check |
-| `oci ce cluster create-kubeconfig` | Write Kubernetes connection settings | Setup only if a working file is absent; retain in Terraform's connection output and cleanup automation |
+| `oci ce cluster create-kubeconfig` | Write Kubernetes connection settings | Console-guided student setup; retain in Terraform's connection output and cleanup automation |
 | `oci ce cluster generate-token` | Authenticate Kubernetes requests | Automatic kubeconfig dependency; no manual student command |
 | `oci ce cluster-options get --cluster-option-id all --region "$LAB_REGION"` | Check supported cluster options in the target region | Instructor provisioning/troubleshooting only |
 

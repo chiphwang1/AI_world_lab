@@ -81,7 +81,7 @@ The first command downloads the five pinned upstream chart archives into `.lab-c
 
 The ignored chart cache must be prepared separately for every desktop or included in the prepared learner bundle. It contains no container images. Newly created workers still need registry access; if an approved image-prepull process is used, measure it during the provisioning window after workers exist and record which images were cached. Do not deploy student releases merely to warm the cache, or count warm upgrades as first installs.
 
-Verify the actual Bash-resolved OCI CLI, kubectl, Helm, Git, and curl. Prepare the assigned context and `~/.kube/oke-lab`, with the correct OCI profile/authentication and any required environment settings in **each fresh terminal**. Arrange Helm install permissions separately; students do not troubleshoot credentials or permissions during the hour. Open three labeled Bash terminals (commands, Kiali, Grafana), the student values file in the editor, and the completion sheet. Do not start dashboard forwards until their Services exist.
+Verify the actual Bash-resolved OCI CLI, kubectl, Helm, Git, and curl. Supply the assigned cluster name, OCID, region, compartment, expected context, and prepared OCI identity. Guide students through Console-based kubeconfig setup in the README, preferably during the lecture demonstration after their cluster is ready. They obtain their own `~/.kube/oke-lab`; do not distribute an instructor's credentials. Verify any required OCI environment settings in **each fresh terminal**, especially for the Cloud Shell download alternative. Arrange Helm install permissions separately; students do not troubleshoot credentials or permissions during the hour. Open three labeled Bash terminals (commands, Kiali, Grafana), the student values file in the editor, and the completion sheet. Do not start dashboard forwards until their Services exist. Measure the revised setup in the next pilot rather than assuming the five-minute connection target is proven.
 
 At workshop minute 20:
 
@@ -186,7 +186,7 @@ Deploy, monitor, and scale an application on a Luna-provisioned Oracle Kubernete
 Have these ready before the hands-on portion:
 
 - Access to your assigned Luna desktop and lab repository or prepared checkout.
-- Your assigned cluster context and working kubeconfig, provided by the instructor.
+- Your assigned cluster details/context and prepared OCI credentials, provided by the instructor; obtain your own kubeconfig using the Console instructions in step 1.
 - A Bash terminal with OCI CLI, kubectl, Helm, Git, and curl installed; the instructor prepares these tools.
 - Basic familiarity with terminal commands and editing a YAML file.
 

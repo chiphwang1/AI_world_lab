@@ -59,7 +59,9 @@ ls
 
 If `ls` shows `README.md`, `charts`, `helm`, and `scripts`, you are in the repository root. Do not run `cd oke-bootcamp` again; that would look for another folder inside it.
 
-The instructor supplies your assigned context and a working kubeconfig. A **kubeconfig** defines cluster connections and authentication; a **context** selects a cluster and user. `KUBECONFIG` selects the file independently of your directory. The instructor resolves access using [cluster access setup](docs/cluster-access.md) before you continue.
+The instructor supplies your assigned cluster name, region, compartment, expected context, and prepared OCI CLI identity. You obtain your own kubeconfig using [Console-based cluster access setup](docs/cluster-access.md). In the OCI Console, select the assigned cluster, then **Actions → Access cluster → Local Access**. Run the supplied `oci ce cluster create-kubeconfig` command in your Luna desktop terminal, using `--file "$HOME/.kube/oke-lab"` and the assigned OCI profile as explained in the access guide. “Local” means the Luna desktop, not your personal laptop. This writes connection settings for the existing cluster; it does not provision a cluster. Complete this during the lecture's setup demonstration where possible.
+
+A **kubeconfig** defines cluster connections and authentication; a **context** selects a cluster and user. `KUBECONFIG` selects the file independently of your directory. If a browser download is required, follow the access guide's Cloud Shell alternative; downloading a file does not configure local OCI credentials. Never copy an instructor's keys or tokens. See [Oracle's access instructions](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm).
 
 The walkthrough uses `~/.kube/oke-lab`; substitute the instructor's path **in every terminal** if yours differs. Replace `<instructor-assigned-context>` below with the exact name supplied by the instructor, keeping the quotes:
 
@@ -89,6 +91,24 @@ bash scripts/prepare-charts.sh --check
 Expect five `PASS Prepared chart` lines. If a chart is missing or mismatched, ask the instructor to finish preparation. Keep terminal 1 in this directory for lab commands. The Git tag pins the lab files; `helm/versions.env` pins the upstream charts.
 
 **Checkpoint:** confirm the assigned context, two Ready nodes, numeric CPU readings, and available lab files. Explain which file selects your Kubernetes connection and which component supplies CPU metrics.
+
+Run from the repository root in terminal 1. Replace the placeholder with your assigned context. The `&&` operators stop subsequent commands if a check fails; the preflight verifies the assignment before contacting the cluster.
+
+```bash
+export KUBECONFIG="$HOME/.kube/oke-lab"
+LAB_CONTEXT='<instructor-assigned-context>'
+printf 'Kubeconfig: %s\n' "$KUBECONFIG"
+kubectl config current-context &&
+bash scripts/check-ready.sh --context "$LAB_CONTEXT" &&
+kubectl --context "$LAB_CONTEXT" --request-timeout=15s get nodes &&
+kubectl --context "$LAB_CONTEXT" --request-timeout=15s top nodes &&
+ls -ld README.md charts helm scripts &&
+bash scripts/prepare-charts.sh --check
+```
+
+Expect `Preflight passed`, two node rows showing `Ready`, numeric CPU/memory readings for both nodes, the four lab paths, and five `PASS Prepared chart` lines. Stop and ask for help on any failure. A CPU reading such as `125m` means 0.125 CPU core, not a required target.
+
+**Explain:** `KUBECONFIG` points to `~/.kube/oke-lab`; the selected context inside that file identifies the cluster and user. Metrics Server supplies the resource metrics used by `kubectl top` and this lab's HPA; Prometheus supplies the dashboard metrics. See [kubectl top node](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_top/kubectl_top_node/).
 
 ## 2. Install Istio, Prometheus, Kiali, and Grafana — 18 minutes
 
@@ -192,6 +212,28 @@ kubectl -n oke-lab get pods -l app=hello-oke \
 ```
 
 Expect two application replicas with an `istio-proxy` beside the `web` container, normally showing `2/2` containers ready. In this pinned setup, Istio uses a native sidecar: `istio-proxy` appears under `init/sidecars` but keeps running alongside `web`; `istio-init` is a separate setup container that completes. Do not also apply the legacy `kubernetes/` manifests; they use the same application name but are not Helm-managed.
+
+To verify the replicas and inspect both pods without changing them, use the assigned context from step 1:
+
+```bash
+kubectl --context "$LAB_CONTEXT" -n oke-lab rollout status deployment/hello-oke --timeout=300s &&
+kubectl --context "$LAB_CONTEXT" -n oke-lab get deployment hello-oke &&
+kubectl --context "$LAB_CONTEXT" -n oke-lab get pods -l app=hello-oke
+
+kubectl --context "$LAB_CONTEXT" -n oke-lab get pods -l app=hello-oke \
+  -o 'jsonpath={range .items[*]}{.metadata.name}{"\n  app containers: "}{.spec.containers[*].name}{"\n  init/sidecars: "}{.spec.initContainers[*].name}{"\n"}{end}'
+
+kubectl --context "$LAB_CONTEXT" -n oke-lab describe pods -l app=hello-oke
+```
+
+Expect Deployment `READY` to be `2/2` and two application pods, normally each `2/2 Running`. In each pod's description, look for `web` under **Containers** with `State: Running` and `Ready: True`; `istio-proxy` under **Init Containers** with `State: Running` and `Ready: True`; and `istio-init` with `State: Terminated`, `Reason: Completed`, and `Exit Code: 0`. The next command confirms the native sidecar's per-container restart policy:
+
+```bash
+kubectl --context "$LAB_CONTEXT" -n oke-lab get pods -l app=hello-oke \
+  -o 'jsonpath={range .items[*]}{.metadata.name}{": istio-proxy restartPolicy="}{.spec.initContainers[?(@.name=="istio-proxy")].restartPolicy}{"\n"}{end}'
+```
+
+Expect `Always` for both pods. A native sidecar remains running despite being listed under init containers; an ordinary init container completes before the application starts. See [Kubernetes sidecar containers](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/). If these checks differ, ask the instructor; do not apply the legacy manifests or reinstall components merely to match the example.
 
 The Service requests one OCI LoadBalancer. Get its public IP, save it in `APP_IP` for later commands, and display it:
 
