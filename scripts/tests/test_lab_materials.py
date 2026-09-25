@@ -55,6 +55,62 @@ class LabMaterials(unittest.TestCase):
         self.assertTrue(blocks[0].startswith("git clone --branch "))
         self.assertEqual(re.sub(r"```bash\n.*?```", "", section, flags=re.S).strip(), "")
 
+    def test_preparation_is_outside_the_timed_exercises(self):
+        readme = (ROOT / "README.md").read_text()
+        preparation, exercises = readme.split("## 1. Confirm your prepared connection", 1)
+        self.assertIn("## Before hands-on: prepare during the lecture", preparation)
+        for command in ("git clone --branch", "oci ce cluster create-kubeconfig",
+                        "bash scripts/check-ready.sh --context",
+                        "source helm/versions.env", "bash scripts/prepare-charts.sh --check"):
+            with self.subTest(command=command):
+                self.assertIn(command, preparation)
+        confirmation = exercises.split("## 2.", 1)[0]
+        commands = re.findall(r"```bash\n(.*?)```", confirmation, re.S)
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(commands[0].splitlines(), [
+            "pwd", "kubectl config current-context", "kubectl get nodes", "kubectl top nodes",
+        ])
+        access = (ROOT / "docs/cluster-access.md").read_text()
+        self.assertIn("../README.md#1-confirm-your-prepared-connection--5-minutes", access)
+        for name in ("docs/instructor-guide.md", "helm/README.md"):
+            with self.subTest(file=name):
+                text = (ROOT / name).read_text()
+                self.assertIn("Before hands-on", text)
+                self.assertNotIn("README step 1", text)
+
+    def test_detailed_sidecar_inspection_is_optional(self):
+        readme = (ROOT / "README.md").read_text()
+        core = readme.split("## Appendix A:", 1)[0]
+        appendix = readme.split("## Appendix B: Optional pod inspection", 1)[1]
+        for detail in (".spec.initContainers", "restartPolicy", "native sidecar"):
+            with self.subTest(detail=detail):
+                self.assertNotIn(detail, core)
+                self.assertIn(detail, appendix)
+        deployment = core.split("## 3.", 1)[1].split("## 4.", 1)[0]
+        self.assertNotIn("kubectl -n oke-lab describe pods", deployment)
+        self.assertIn('curl --fail --max-time 10 "http://${APP_IP}/"', deployment)
+        for concept in ("**Deployment**", "**Pod**", "**Service**"):
+            self.assertLess(deployment.index(concept), deployment.index("helm upgrade --install"))
+
+    def test_hpa_inspection_follows_creation(self):
+        readme = (ROOT / "README.md").read_text()
+        before_scaling, scaling = readme.split("## 5.", 1)
+        self.assertNotRegex(before_scaling, r"kubectl[^\n`]*\b(?:get|describe) hpa\b")
+        self.assertIn("Not enabled", before_scaling.split("## 4.", 1)[1])
+        self.assertLess(scaling.index("--set autoscaling.enabled=true"),
+                        scaling.index("kubectl -n oke-lab get hpa hello-oke"))
+
+    def test_dashboard_guidance_explains_results(self):
+        readme = (ROOT / "README.md").read_text()
+        dashboards = readme.split("## 4.", 1)[1].split("## 5.", 1)[0]
+        for explanation in ("95th percentile", "percentage of requests", "average request rate",
+                            "Forwarding from 127.0.0.1:20001", "Forwarding from 127.0.0.1:13000"):
+            with self.subTest(explanation=explanation):
+                self.assertIn(explanation, dashboards)
+        self.assertIn("--reuse-values` keeps your existing release settings", readme)
+        self.assertIn("Use one baseline reading and one load reading", readme)
+        self.assertIn("cannot isolate autoscaling's effect on latency", readme)
+
     def test_bash_blocks_parse_and_local_links_resolve(self):
         for path in (ROOT / "README.md", *sorted((ROOT / "docs").glob("*.md")), ROOT / "helm/README.md"):
             text = path.read_text()

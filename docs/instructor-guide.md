@@ -2,7 +2,7 @@
 
 This file contains instructor notes, preparation, debrief answers, and release checks. The student walkthrough is [README.md](../README.md).
 
-Plan for **90 minutes: 30 minutes of lecture and cluster provisioning, followed by 60 minutes of hands-on work and debrief**. Cluster creation starts at workshop minute 0, not before the session. Prepare desktops and repository access beforehand; students clone the repository during the lecture. Students follow [README.md](../README.md); use the same [architecture diagram](architecture.md) in the lecture.
+Plan for **90 minutes: 30 minutes of lecture and cluster provisioning, followed by 60 minutes of hands-on work and debrief**. Cluster creation starts at workshop minute 0, not before the session. Prepare desktops and repository access beforehand; students complete the README's **Before hands-on** section during the lecture. Finish cloning, console sign-in, kubeconfig creation, chart preparation, and readiness checks before starting the learner clock. Step 1 confirms the prepared connection; it is not an allowance for unfinished setup. Students follow [README.md](../README.md); use the same [architecture diagram](architecture.md) in the lecture.
 
 ## Published learner handouts
 
@@ -22,12 +22,12 @@ Render and visually inspect both pages before publishing. The builder rejects un
 
 | Workshop minute | Activity or readiness gate |
 |---|---|
-| 0–5 | Start each assigned cluster's provisioning. Have students clone the repository using README step 1. Introduce the app and learning goals. |
+| 0–5 | Start each assigned cluster's provisioning. Have students clone the repository using the README's Before hands-on section. Introduce the app and learning goals. |
 | 5–15 | Trace requests, dashboard telemetry, and HPA CPU metrics on the shared diagram. |
-| 15–20 | Explain Helm releases, Services, and readiness versus liveness. |
+| 15–20 | Explain Deployment → Pods → Service, chart versus release, and readiness versus liveness. |
 | 20 | A helper checks provisioning status and identifies sessions needing intervention. Continue the lecture. |
 | 20–30 | Explain CPU requests/limits and HPA; demonstrate repository root, kubeconfig, and the three-terminal layout. Resolve access problems. |
-| 30 | Begin the learner clock only if assigned access, two Ready workers, and resource metrics are available. |
+| 30 | Begin the learner clock only after console sign-in, cloning, kubeconfig creation, cluster preflight, and all five prepared-chart checks pass. |
 | 53 / lab 23 | Mesh and monitoring installed. Intervene on blocked installations. |
 | 63 / lab 33 | Public app and baseline traffic working. Intervene before dashboard exploration. |
 | 77 / lab 47 | Start the five-minute burst by this point to leave time for scale-in. |
@@ -42,25 +42,25 @@ Prepare the desktop and repository access before the workshop. Download the pinn
 
 ### One materials revision
 
-Publish the immutable, annotated tag `lab-2026-09-23.1` in both GitLab (Luna's source) and the private GitHub distribution repository before distributing these instructions. Both tags must identify the same commit containing these updated instructions and pass the remote checks below. A revision printed in the README does not create a release tag; the student's clone command will fail until that tag is published. This is a versioned materials release; the classroom pilot and other release gates below remain required. Keep Luna's published GitLab branch at this revision during a workshop, and make later edits on a separate branch. Do not move an existing release tag.
+Publish the immutable, annotated tag `lab-2026-09-25.1` in both GitLab (Luna's source) and the private GitHub distribution repository before distributing these instructions. Both tags must identify the same commit containing these updated instructions and pass the remote checks below. A revision printed in the README does not create a release tag; the student's clone command will fail until that tag is published. This is a versioned materials release; the classroom pilot and other release gates below remain required. Keep Luna's published GitLab branch at this revision during a workshop, and make later edits on a separate branch. Do not move an existing release tag.
 
-Students download a **new** checkout with the pinned clone command in README step 1. After cloning, verify the revision in their checkout before handoff:
+Students download a **new** checkout with the pinned clone command in the README's Before hands-on section. After cloning, verify the revision in their checkout before handoff:
 
 ```bash
 cd "$HOME/oke-bootcamp"
 git describe --tags --exact-match HEAD
 ```
 
-Expect `lab-2026-09-23.1`. Students skip cloning if that folder exists. Inspect its revision and edits; do not reset, pull over, or delete a learner's work. If it is the wrong revision, prepare a separate directory and supply that path. The repository is private: resolve learner access beforehand, avoid credentials in clone URLs, and do not leave an instructor's Git credentials on a shared desktop. An instructor-distributed checkout must retain Git metadata and the release tag for this revision check.
+Expect `lab-2026-09-25.1`. Students skip cloning if that folder exists. Inspect its revision and edits; do not reset, pull over, or delete a learner's work. If it is the wrong revision, prepare a separate directory and supply that path. The repository is private: resolve learner access beforehand, avoid credentials in clone URLs, and do not leave an instructor's Git credentials on a shared desktop. An instructor-distributed checkout must retain Git metadata and the release tag for this revision check.
 
 Before publishing or teaching, compare these remote outputs. Both `refs/heads/main` values and both peeled tag values (`^{}`) must match the selected release commit. Stop on a missing or different value; a successful GitLab push alone does not synchronize GitHub.
 
 ```bash
-git ls-remote origin refs/heads/main 'refs/tags/lab-2026-09-23.1^{}'
-git ls-remote github refs/heads/main 'refs/tags/lab-2026-09-23.1^{}'
+git ls-remote origin refs/heads/main 'refs/tags/lab-2026-09-25.1^{}'
+git ls-remote github refs/heads/main 'refs/tags/lab-2026-09-25.1^{}'
 ```
 
-These remote names apply to the maintainer checkout. Verify Luna displays `Materials revision: lab-2026-09-23.1` and that its PDF/PNG links work. Record the resolved commit on the pilot timing sheet. Do not treat the tag itself as evidence that classroom testing passed.
+These remote names apply to the maintainer checkout. Verify Luna displays `Materials revision: lab-2026-09-25.1` and that its PDF/PNG links work. Record the resolved commit on the pilot timing sheet. Do not treat the tag itself as evidence that classroom testing passed.
 
 A local commit or tag does not update either remote. When publication is approved, review both remotes for newer work, then push the same reviewed commit and annotated tag to both without force. Use an atomic push per remote so its branch and tag update together. If either push fails, stop distribution until both pass the checks above; atomic pushes do not span two repositories.
 
@@ -81,7 +81,7 @@ The first command downloads the five pinned upstream chart archives into `.lab-c
 
 The ignored chart cache must be prepared separately for every desktop or included in the prepared learner bundle. It contains no container images. Newly created workers still need registry access; if an approved image-prepull process is used, measure it during the provisioning window after workers exist and record which images were cached. Do not deploy student releases merely to warm the cache, or count warm upgrades as first installs.
 
-Verify the actual Bash-resolved OCI CLI, kubectl, Helm, Git, and curl. Supply the assigned cluster name, OCID, region, compartment, expected context, and prepared OCI identity. Guide students through Console-based kubeconfig setup in the README, preferably during the lecture demonstration after their cluster is ready. They obtain their own `~/.kube/oke-lab`; do not distribute an instructor's credentials. Verify any required OCI environment settings in **each fresh terminal**, especially for the Cloud Shell download alternative. Arrange Helm install permissions separately; students do not troubleshoot credentials or permissions during the hour. Open three labeled Bash terminals (commands, Kiali, Grafana), the student values file in the editor, and the completion sheet. Do not start dashboard forwards until their Services exist. Measure the revised setup in the next pilot rather than assuming the five-minute connection target is proven.
+Verify the actual Bash-resolved OCI CLI, kubectl, Helm, Git, and curl. Supply the assigned cluster name, OCID, region, compartment, expected context, and prepared OCI identity. Guide students through Console-based kubeconfig setup during the lecture after their cluster is ready. They obtain their own `~/.kube/oke-lab`; do not distribute an instructor's credentials. Verify any required OCI environment settings in **each fresh terminal**, especially for the Cloud Shell download alternative. Arrange Helm install permissions separately; students do not troubleshoot credentials or permissions during the hour. Open three labeled Bash terminals (commands, Kiali, Grafana), the student values file in the editor, and the completion sheet. Keep terminal 1 open after preparation so its kubeconfig and chart-version variables remain available. Do not start dashboard forwards until their Services exist. Measure preparation separately from step 1's connection confirmation in the next pilot.
 
 At workshop minute 20:
 
@@ -95,7 +95,9 @@ At workshop minute 20:
 3. Check the managed Cert Manager and Metrics Server add-ons are healthy and that permissions and image access have been validated. Confirm the materials revision and `prepare-charts.sh --check` in the learner's checkout. The cluster preflight does **not** prove Helm install permissions, all scheduling constraints, or future LoadBalancer availability.
 4. Resolve missing authentication, old binaries, add-on readiness, or failed provisioning before minute 30. Re-run preflight in a fresh learner terminal. Do not silently switch a learner to another person's or a production cluster.
 
-Protect the observation and debrief blocks. Use installation waits for the architecture discussion and the five-minute load burst for the metrics-source explanation. If setup runs late, send a helper to resolve it; do not replace the learner's interpretation time with more setup commands or silently mark missing observations complete. Keep the last five minutes for debrief and skip optional recovery when behind.
+Protect the observation and debrief blocks. Use installation waits for the architecture discussion, the manual-scaling wait for readiness and liveness, and the five-minute load burst for the metrics-source explanation. No extra deployment or deliberate failure is needed for the probe discussion. If setup runs late, send a helper to resolve it; do not replace the learner's interpretation time with more setup commands or silently mark missing observations complete. Keep the last five minutes for debrief and skip optional recovery when behind.
+
+In step 3, have students reach their customized HTTP response before opening detailed pod descriptions. Use the diagram to identify `web` and `istio-proxy`; Appendix B contains optional JSONPath, native-sidecar, and restart-policy checks. Use that appendix for troubleshooting or follow-up study, not as another required checkpoint.
 
 If a cluster cannot be ready at minute 30, use an already authorized, dedicated spare if one is available. Otherwise use an instructor demonstration and record that learner as **demonstration only**, not completed. Starting their full lab late cannot preserve the 90-minute limit. Provisioning inside 30 minutes remains a release requirement to validate, not a promise established by local rehearsal.
 
@@ -103,7 +105,9 @@ Keep two workers for this tested per-learner workload. Validate allocatable capa
 
 ## Debrief answer guide
 
-Use the [completion sheet](completion-sheet.md) to assess both observations and explanations. At each prediction, wait about 30 seconds before giving the explanation: students state or write a prediction, inspect the existing output, then explain the result to a partner or instructor. Ask "Which value supports that?" before correcting an answer. Use the existing install/load waits and checkpoint time; do not add another quiz. Do not require a peak of six replicas or invent readings for missing panels.
+Use the [completion sheet](completion-sheet.md) to assess both observations and explanations. At each prediction, wait about 30 seconds before giving the explanation: students state or write a prediction, inspect the existing output, then explain the result to a partner or instructor. Ask "Which value supports that?" before correcting an answer. These pauses are included in the exercise estimates; use the install/load waits and checkpoint time rather than adding another quiz. Do not require a peak of six replicas or invent readings for missing panels.
+
+At the dashboard checkpoint, ask learners to show the Kiali traffic edge and explain one Grafana reading, then name their shared data source. The baseline HPA field is `Not enabled`; do not ask students to inspect it before step 5 creates it. During the burst, have partners compare baseline and load request rate, p95 latency, and replica count, using their readings to explain one change. Also compare an HPA CPU reading with dashboard data to distinguish the two metrics paths. At scale-in, check the HPA count and two Ready app pods before accepting completion; discuss any lag in Grafana's proxy count. Students can finish questions 2–4 during this wait.
 
 Listen for a reason, not only a correct tool name. For example, a learner should connect HPA CPU input to Metrics Server and identify a request-rate or latency reading supplied by Prometheus. For the Running/Ready question, let the learner distinguish traffic eligibility from restart behavior before confirming that a Running pod can be unready with zero restarts. Reveal the answer guide after the learner has attempted the explanation.
 
@@ -111,6 +115,7 @@ Listen for a reason, not only a correct tool name. For example, a learner should
 |---|---|
 | Stable endpoint | The Service survives pod replacement; its OCI LoadBalancer address remains unchanged during pod scaling. |
 | Two metrics paths | Metrics Server supplies this HPA's resource metrics. Prometheus supplies Kiali and Grafana with mesh telemetry. |
+| Dashboard interpretation | Request rate counts requests per second; success rate counts the percentage with HTTP 2xx/3xx responses. p95 estimates the response time within which about 95% of requests finish. Baseline `/` and load `/work` do different work, so their latency comparison does not isolate autoscaling's effect. |
 | Scaling | Manual scaling and HPA change app replicas; neither changes worker count in this lab. HPA owns the count once enabled. |
 | Scale-in evidence | HPA returns to two and two app pods are Ready after CPU falls. Scrape discovery can make Grafana's proxy count lag; it is not a readiness measurement. |
 | Probes and Degraded | Readiness excludes an unready pod from normal Service traffic; liveness can restart a failing container. Kiali's label alone does not identify a probe failure: inspect the affected object, pod state, events, and request errors. |
@@ -126,7 +131,7 @@ Completion requires the customized public response, mesh traffic, baseline/load/
 Run the pilot in a separately authorized, disposable Luna session. Do not reset an existing rehearsal cluster or destroy locally tracked infrastructure merely to satisfy this checklist.
 
 - [ ] Record the repository revision, desktop tools, node shape/count, permissions, and exact provisioning start/Ready/metrics-ready times. Verify provisioning overlaps the lecture and finishes by minute 30.
-- [ ] Have a learner unfamiliar with the lab follow the README without hidden instructor commands. Record prompts for help, navigation errors, and each checkpoint time.
+- [ ] Have a Kubernetes beginner follow the README without hidden instructor commands. Record prompts for help, navigation errors, preparation completion, and each checkpoint time. Confirm the learner can explain Deployment, Pod, and Service roles and interpret one dashboard change; copying output alone does not demonstrate understanding.
 - [ ] Inventory already-installed add-ons/releases and cached charts/images. Measure clean student installs; label any warm reuse. Do not compare a cached upgrade directly with a fresh install.
 - [ ] Record command execution/waits separately from reading, editing, typing, and interpreting results. Actual learner delays are measured human time; simulated allowances must be labeled as estimates. Account for overlap once, not twice.
 - [ ] Verify both dashboard UIs, manual 2→4→2 scaling, numeric HPA metrics, the bounded burst, scale-out, explicit load reset, and scale-in. Finish core work by lab minute 55 and the debrief by workshop minute 90.
@@ -140,14 +145,15 @@ Pilot timing record:
 | Phase | Start/end on workshop clock | Measured command/wait time | Measured human time | Overlap | Simulated allowance, if any | Result/blocker |
 |---|---|---|---|---|---|---|
 | Provisioning + lecture | ___ | ___ | ___ | ___ | ___ | ___ |
-| Connect | ___ | ___ | ___ | ___ | ___ | ___ |
+| Access + chart preparation (during lecture) | ___ | ___ | ___ | ___ | ___ | ___ |
+| Confirm prepared connection | ___ | ___ | ___ | ___ | ___ | ___ |
 | Install components | ___ | ___ | ___ | ___ | ___ | ___ |
 | Build/run | ___ | ___ | ___ | ___ | ___ | ___ |
 | Observe | ___ | ___ | ___ | ___ | ___ | ___ |
 | Scale-out/in | ___ | ___ | ___ | ___ | ___ | ___ |
 | Debrief | ___ | ___ | ___ | ___ | ___ | ___ |
 
-The earlier model was approximately 50–51 minutes with prepared caches and simulated human allowances, or 56–61 with simulated cold-download allowances before troubleshooting. These are not measurements of this revised learner document. Retest rather than claiming that a shorter README proves a faster class.
+Record access/chart preparation within the lecture window; do not add that overlapping row to the lecture duration again. The earlier model was approximately 50–51 minutes with prepared caches and simulated human allowances, or 56–61 with simulated cold-download allowances before troubleshooting. These are not measurements of this revised learner document. Retest rather than claiming that a shorter README proves a faster class.
 
 ## Maintenance and distribution
 
@@ -155,7 +161,7 @@ The [September 18 rehearsal](rehearsal-2026-09-18.md), [September 21 reset/reins
 
 The preflight compatibility check follows the pinned Istio 1.31.x range, Kubernetes 1.32–1.36, and kubectl's one-minor-version skew rule. Review the script and its tests whenever changing these pins. Sources: [Istio supported releases](https://istio.io/latest/docs/releases/supported-releases/) and [kubectl version skew policy](https://kubernetes.io/releases/version-skew-policy/#kubectl).
 
-The private GitHub mirror and GitLab source must publish the same immutable materials tag, `lab-2026-09-23.1`, and matching main-branch commit for Luna. Publish both explicitly, without force-pushing, and verify the remote hashes as described above. Use GitLab's `ci.skip` push option for documentation/materials publication so it does not launch infrastructure jobs; required security scans remain a separate release gate. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
+The private GitHub mirror and GitLab source must publish the same immutable materials tag, `lab-2026-09-25.1`, and matching main-branch commit for Luna. Publish both explicitly, without force-pushing, and verify the remote hashes as described above. Use GitLab's `ci.skip` push option for documentation/materials publication so it does not launch infrastructure jobs; required security scans remain a separate release gate. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
 
 `terraform/` and CI scripts are instructor-managed; `charts/` and `helm/` contain learner deployment materials. Do not mix the legacy `kubernetes/` manifests into the Helm student workflow. See [CI administration](gitlab-ci.md), [local Terraform workflow](maintainer-infrastructure.md), and [cleanup](cleanup.md).
 
@@ -186,7 +192,8 @@ Deploy, monitor, and scale an application on a Luna-provisioned Oracle Kubernete
 Have these ready before the hands-on portion:
 
 - Access to your assigned Luna desktop and lab repository or prepared checkout.
-- Your assigned cluster details/context and prepared OCI credentials, provided by the instructor; obtain your own kubeconfig using the Console instructions in step 1.
+- Your assigned cluster details/context and prepared OCI credentials, provided by the instructor; obtain your own kubeconfig using the README's Before hands-on instructions during the lecture.
+- A completed cluster preflight and five passing prepared-chart checks in your checkout before starting the 60-minute lab.
 - A Bash terminal with OCI CLI, kubectl, Helm, Git, and curl installed; the instructor prepares these tools.
 - Basic familiarity with terminal commands and editing a YAML file.
 
