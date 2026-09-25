@@ -14,7 +14,7 @@ This lab assumes you can navigate a terminal, copy commands, and edit a YAML val
 
 Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private.
 
-Materials revision: `lab-2026-09-22.3`. Your checkout and Luna instructions must show this same revision. During each prediction prompt, take 30 seconds to state your answer before continuing; use the following command output to explain whether your prediction held. These pauses are included in the exercise times.
+Materials revision: `lab-2026-09-23.1`. Your checkout and Luna instructions must show this same revision. During each prediction prompt, take 30 seconds to state your answer before continuing; use the following command output to explain whether your prediction held. These pauses are included in the exercise times.
 
 [Download the completion sheet (PDF)](docs/completion-sheet.pdf) for the lab checkpoints. If it opens in your browser, use the PDF viewer's download button to save a copy. You can print it or use the [Markdown version](docs/completion-sheet.md) in your own notes.
 
@@ -41,10 +41,12 @@ Times are **planning targets, not guaranteed completion times**, counted from th
 
 Open your assigned Luna session as directed by the instructor. The desktop can appear before the cluster is ready. If provisioning is still running or has failed, ask the instructor; do not create a replacement cluster.
 
+Right-click an empty area of the Luna desktop and open a terminal. Use Bash and keep this window as **terminal 1**.
+
 In **terminal 1** on your Luna desktop, download the lab repository:
 
 ```bash
-git clone --branch lab-2026-09-22.3 --single-branch \
+git clone --branch lab-2026-09-23.1 --single-branch \
   https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&
   cd "$HOME/oke-bootcamp"
 ```
@@ -53,16 +55,22 @@ git clone --branch lab-2026-09-22.3 --single-branch \
 
 Obtain your own kubeconfig using your temporary Luna account. Complete this setup during the lecture demonstration where possible, once your cluster is ready.
 
-1. On your running Luna virtual desktop, double-click the **Luna Lab** icon.
-2. On the Luna Lab page, click the **OCI Console** quick link. Sign in using the temporary username and password shown under **Credentials**. Keep these credentials private; do not paste them into terminal commands, screenshots, or Git files.
-3. Return to the Luna Lab page and open **Oracle Cloud**. Find **Compartment Name** and note it for the cluster selection below. You do not need to inspect Terraform logs to find your login or compartment.
+1. On the Luna desktop, double-click the **Luna-Lab** icon (it may be labeled **Luna Lab**). A browser page opens with credentials and information for your lab session. Keep this page open.
+2. Under **Quick Links**, click **OCI Console**. The Oracle Cloud sign-in page opens in a new browser tab.
+3. From the Luna Lab page's **Credentials** section, copy your assigned username and password into the sign-in page's **User Name** and **Password** fields. **Do not use the SSO Link.**
+4. To paste into either field, press **Ctrl+V** or right-click and choose **Paste**. After entering both values, click **Sign In**. The OCI Console home page opens.
+5. Return to the Luna Lab page and note your assigned **Compartment Name** and **region**. Look in **Lab Details**; if your page has an **Oracle Cloud** section, find **Compartment Name** there. Use this assignment when selecting your cluster below.
+
+Keep credentials private; do not paste them into terminal commands, screenshots, or Git files. You do not need Terraform logs to find your login or compartment.
 
 If the icon, quick link, credentials, or compartment information is missing, stop and ask the instructor to check your Luna session. Do not substitute a personal account or another learner's credentials. Oracle documents this flow in its [Luna login and compartment instructions](https://docs.oracle.com/en/learn/build-cloud-native-java-applications-with-micronaut-and-graalvm/lab1/configure-db-access.html); only the login steps apply here, not that tutorial's database exercises.
 
 ### Open your own cluster in the OCI Console
 
-1. In the OCI Console, select your assigned **region** and open **Kubernetes Clusters (OKE)**.
-2. In the compartment selector, choose the **Compartment Name** shown for your Luna session.
+Your lab resources are limited to the assigned compartment. Check the region and compartment each time you return to the Console or open another resource list.
+
+1. In the OCI Console, select your assigned **region**. Open the navigation menu in the upper-left corner, select **Developer Services**, then under **Containers & Artifacts**, select **Kubernetes Clusters (OKE)**. See [Oracle's cluster navigation instructions](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/list-clusters.htm).
+2. Open the **Compartment** filter. Expand the compartment hierarchy if needed and select the exact **Compartment Name** shown on your Luna Lab page. Do not choose a compartment just because its name begins with `luna`, and do not use the tenancy root.
 3. Click **your assigned cluster's name** to open its details page. Compare its name and OCID with the instructor's assignment before continuing. If the cluster is absent, still provisioning, or ambiguous, ask for help; do not choose another cluster.
 
    **Example page only—not a shared student cluster:** [OKE cluster details in Phoenix](https://cloud.oracle.com/containers/clusters/ocid1.cluster.oc1.phx.aaaaaaaa5mwgyqarbllvk7xavr2qkvipop7ihd6i4i5vejaoxctcyaybtyaq?region=us-phoenix-1). This link identifies one specific cluster. Use the equivalent page for **your own cluster**, not the example's OCID. Your region may also differ.

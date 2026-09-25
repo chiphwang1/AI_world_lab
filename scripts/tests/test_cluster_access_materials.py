@@ -21,6 +21,33 @@ class ClusterAccessMaterials(unittest.TestCase):
             self.assertIn(label, login)
         self.assertIn("stop and ask the instructor", login)
 
+    def test_luna_sign_in_has_explicit_credentials_and_paste_steps(self):
+        readme = (ROOT / "README.md").read_text()
+        login = readme.split("### Find your lab login and compartment", 1)[1].split(
+            "### Open your own cluster in the OCI Console", 1)[0]
+        for label in ("Luna-Lab", "Quick Links", "User Name", "Password",
+                      "Do not use the SSO Link", "Ctrl+V", "Paste", "Sign In",
+                      "Lab Details", "region"):
+            with self.subTest(label=label):
+                self.assertIn(label, login)
+        self.assertLess(login.index("OCI Console"), login.index("User Name"))
+        self.assertLess(login.index("User Name"), login.index("Sign In"))
+        access = (ROOT / "docs/cluster-access.md").read_text()
+        self.assertIn("Do not use the SSO Link", access)
+        self.assertIn("Lab Details", access)
+
+    def test_console_selection_uses_oke_and_exact_assigned_compartment(self):
+        readme = (ROOT / "README.md").read_text()
+        cluster = readme.split("### Open your own cluster in the OCI Console", 1)[1].split(
+            "### Verify your kubeconfig", 1)[0]
+        for label in ("Developer Services", "Containers & Artifacts", "Kubernetes Clusters (OKE)",
+                      "Compartment", "exact **Compartment Name**", "hierarchy"):
+            with self.subTest(label=label):
+                self.assertIn(label, cluster)
+        self.assertNotIn("Compute", cluster)
+        self.assertIn("each time", cluster)
+        self.assertIn("do not use the tenancy root", cluster)
+
     def test_browser_login_does_not_replace_cli_authentication(self):
         readme = (ROOT / "README.md").read_text()
         access = (ROOT / "docs/cluster-access.md").read_text()
