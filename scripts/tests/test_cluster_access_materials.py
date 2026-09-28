@@ -45,7 +45,7 @@ class ClusterAccessMaterials(unittest.TestCase):
             with self.subTest(label=label):
                 self.assertIn(label, cluster)
         self.assertNotIn("Compute", cluster)
-        self.assertIn("each time", cluster)
+        self.assertIn("Use the assigned compartment and region shown in Luna Lab.", cluster)
         self.assertIn("do not use the tenancy root", cluster)
 
     def test_browser_login_does_not_replace_cli_authentication(self):
