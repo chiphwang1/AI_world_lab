@@ -14,7 +14,7 @@ This lab assumes you can navigate a terminal, copy commands, and edit a YAML val
 
 Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private.
 
-Materials revision: `lab-2026-09-25.1`. Your checkout and Luna instructions must show this same revision.
+Materials revision: `lab-2026-09-28.1`. Your checkout and Luna instructions must show this same revision.
 
 Record checkpoints in the [completion sheet (PDF)](docs/completion-sheet.pdf) or [Markdown version](docs/completion-sheet.md). You can save or print the PDF.
 
@@ -46,7 +46,7 @@ Start the Luna lab when the lecture begins so the cluster can provision during t
 In a **Bash terminal** on your Luna desktop, download the lab repository. Keep this window open as **terminal 1**:
 
 ```bash
-git clone --branch lab-2026-09-25.1 --single-branch \
+git clone --branch lab-2026-09-28.1 --single-branch \
   https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&
   cd "$HOME/oke-bootcamp"
 ```
@@ -110,7 +110,7 @@ PASS Workers: 2/2 Ready and not cordoned
 PASS Resource metrics: numeric CPU and memory for both workers
 ```
 
-Continue only after `Preflight passed`. On `FAIL`, follow its message or ask the instructor; see [preflight troubleshooting](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#preflight-fails). Never use a shared or production cluster. The instructor verifies Helm install permissions separately.
+Continue only after `Preflight passed`. On `FAIL`, follow its message or ask the instructor; see [preflight troubleshooting](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#preflight-fails).
 
 Load chart-version variables such as `ISTIO_VERSION` and check the local archives; these commands do not download or install charts:
 
@@ -186,7 +186,7 @@ Expect `deployment "istiod" successfully rolled out` and confirmation that `oke-
 
 ### Install Prometheus
 
-Install Prometheus before Kiali and Grafana, which query it. Storage is temporary: replacing its pod loses metric history.
+Prometheus stores metrics temporarily; replacing its pod loses metric history.
 
 ```bash
 helm upgrade --install prometheus ".lab-cache/charts/prometheus-${PROMETHEUS_CHART_VERSION}.tgz" \
@@ -194,7 +194,7 @@ helm upgrade --install prometheus ".lab-cache/charts/prometheus-${PROMETHEUS_CHA
   -f helm/values/prometheus.yaml --wait --timeout 10m
 ```
 
-Application metrics become available once the app and its proxies run.
+Application traffic metrics appear after you deploy the app and start the traffic generator.
 
 ### Install Kiali
 
@@ -249,7 +249,7 @@ kubectl -n oke-lab get deploy,pods,svc
 
 Expect `0 chart(s) failed` (an icon recommendation is informational), a `2/2` Ready Deployment, and two `2/2 Running` pods. Each pod's `2/2` means both `web` (HTTP app) and `istio-proxy` (mesh traffic) are ready.
 
-See [Appendix B: pod inspection](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#appendix-b-optional-pod-inspection) after the core lab or when troubleshooting. Do not apply legacy `kubernetes/` manifests alongside this Helm app; their resource names conflict.
+For optional container inspection or troubleshooting, see [Appendix B](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#appendix-b-optional-pod-inspection).
 
 The Service requests an OCI LoadBalancer. Save its public IP for later commands:
 
@@ -288,7 +288,7 @@ Expect JSON responses with your message and pod names about every two seconds. L
 
 ## 4. Explore traffic in Kiali and Grafana — 7 minutes
 
-A port-forward connects your desktop to a cluster Service. Use three terminals on the **same Luna desktop**:
+A Kubernetes Service gives an application a stable network address, even when its pods change. Port-forwarding lets you access that Service from your Luna desktop using a local port. Use three terminals on the **same Luna desktop**:
 
 | Terminal | Purpose |
 |---|---|
