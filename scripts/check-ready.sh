@@ -13,19 +13,18 @@ pass() {
 }
 
 usage() {
-  printf '%s\n' "Usage: bash scripts/check-ready.sh --context '<instructor-assigned-context>'"
-  printf '%s\n' 'Run from the repository root with the assigned kubeconfig/OCI environment.'
+  printf '%s\n' 'Usage: bash scripts/check-ready.sh'
+  printf '%s\n' 'Run from the repository root with the assigned kubeconfig/OCI environment. The current kubeconfig context is checked.'
 }
 
 if [[ ${1:-} == --help && $# == 1 ]]; then
   usage
   exit 0
 fi
-if [[ $# != 2 || ${1:-} != --context || -z ${2:-} || ${2:-} == *'<'* ]]; then
+if [[ $# != 0 ]]; then
   usage >&2
-  fail 'Supply the exact context assigned by the instructor, not a placeholder.'
+  fail 'This check uses the current kubeconfig context; do not supply a context argument.'
 fi
-expected_context=$2
 
 for lab_file in README.md charts/oke-mesh-app/Chart.yaml helm/versions.env \
   helm/values/student.yaml helm/values/istiod.yaml helm/values/prometheus.yaml \
@@ -50,13 +49,11 @@ done
 if ! current_context=$(kubectl config current-context 2>/dev/null); then
   fail 'Context: no usable current context. See docs/cluster-access.md.'
 fi
-[[ "$current_context" == "$expected_context" ]] || \
-  fail "Context: selected '$current_context', expected '$expected_context'. Stop and use the access guide; no cluster API requests were sent."
-pass "Assigned context: $expected_context"
+pass "Selected context: $current_context"
 
 # Pin every subsequent call to the checked context, even if another terminal
 # changes current-context during this check. Suppress raw auth output/tokens.
-kube=(kubectl --context "$expected_context" --request-timeout=15s)
+kube=(kubectl --context "$current_context" --request-timeout=15s)
 if ! client_json=$("${kube[@]}" version --client -o json 2>/dev/null); then
   fail 'kubectl: cannot read the client version. Check command -v kubectl in this Bash terminal.'
 fi

@@ -48,30 +48,25 @@ class LabMaterials(unittest.TestCase):
 
     def test_repository_download_is_one_instruction_and_command(self):
         readme = (ROOT / "README.md").read_text()
-        instruction = "In **terminal 1** on your Luna desktop, download the lab repository:"
+        instruction = "In a **Bash terminal** on your Luna desktop, download the lab repository. Keep this window open as **terminal 1**:"
         section = readme.split(instruction, 1)[1].split("### Find your lab login and compartment", 1)[0]
         blocks = re.findall(r"```bash\n(.*?)```", section, re.S)
         self.assertEqual(len(blocks), 1)
         self.assertTrue(blocks[0].startswith("git clone --branch "))
         self.assertEqual(re.sub(r"```bash\n.*?```", "", section, flags=re.S).strip(), "")
 
-    def test_preparation_is_outside_the_timed_exercises(self):
+    def test_connection_setup_starts_the_timed_exercises(self):
         readme = (ROOT / "README.md").read_text()
-        preparation, exercises = readme.split("## 1. Confirm your prepared connection", 1)
-        self.assertIn("## Before hands-on: prepare during the lecture", preparation)
+        preparation, exercises = readme.split("## 1. Prepare and confirm your connection — 5 minutes", 1)
+        self.assertIn("## Before hands-on: start preparation at the beginning of the lecture", preparation)
+        self.assertNotIn("git clone --branch", preparation)
         for command in ("git clone --branch", "oci ce cluster create-kubeconfig",
-                        "bash scripts/check-ready.sh --context",
+                        "bash scripts/check-ready.sh",
                         "source helm/versions.env", "bash scripts/prepare-charts.sh --check"):
             with self.subTest(command=command):
-                self.assertIn(command, preparation)
-        confirmation = exercises.split("## 2.", 1)[0]
-        commands = re.findall(r"```bash\n(.*?)```", confirmation, re.S)
-        self.assertEqual(len(commands), 1)
-        self.assertEqual(commands[0].splitlines(), [
-            "pwd", "kubectl config current-context", "kubectl get nodes", "kubectl top nodes",
-        ])
+                self.assertIn(command, exercises)
         access = (ROOT / "docs/cluster-access.md").read_text()
-        self.assertIn("../README.md#1-confirm-your-prepared-connection--5-minutes", access)
+        self.assertIn("../README.md#1-prepare-and-confirm-your-connection--5-minutes", access)
         for name in ("docs/instructor-guide.md", "helm/README.md"):
             with self.subTest(file=name):
                 text = (ROOT / name).read_text()

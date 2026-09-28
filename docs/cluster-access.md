@@ -1,6 +1,6 @@
 # Access your assigned OKE cluster
 
-Use this page to obtain your own kubeconfig using the OCI Console, or if selecting the cluster fails. Complete access setup during the lecture, once your assigned cluster is ready, before the 60-minute hands-on clock starts. Return to the README's preparation checks, then [step 1](../README.md#1-confirm-your-prepared-connection--5-minutes). If access remains blocked, ask the instructor before starting the timed exercises.
+Use this page to obtain your own kubeconfig using the OCI Console, or if selecting the cluster fails. Complete access setup during the lecture, once your assigned cluster is ready, before the 60-minute hands-on clock starts. Return to the README's connection checks in [step 1](../README.md#1-prepare-and-confirm-your-connection--5-minutes). If access remains blocked, ask the instructor before starting the timed exercises.
 
 ## Start with your Luna session
 

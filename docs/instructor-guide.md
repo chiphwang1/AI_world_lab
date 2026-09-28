@@ -81,15 +81,15 @@ The first command downloads the five pinned upstream chart archives into `.lab-c
 
 The ignored chart cache must be prepared separately for every desktop or included in the prepared learner bundle. It contains no container images. Newly created workers still need registry access; if an approved image-prepull process is used, measure it during the provisioning window after workers exist and record which images were cached. Do not deploy student releases merely to warm the cache, or count warm upgrades as first installs.
 
-Verify the actual Bash-resolved OCI CLI, kubectl, Helm, Git, and curl. Supply the assigned cluster name, OCID, region, compartment, expected context, and prepared OCI identity. Guide students through Console-based kubeconfig setup during the lecture after their cluster is ready. They obtain their own `~/.kube/oke-lab`; do not distribute an instructor's credentials. Verify any required OCI environment settings in **each fresh terminal**, especially for the Cloud Shell download alternative. Arrange Helm install permissions separately; students do not troubleshoot credentials or permissions during the hour. Open three labeled Bash terminals (commands, Kiali, Grafana), the student values file in the editor, and the completion sheet. Keep terminal 1 open after preparation so its kubeconfig and chart-version variables remain available. Do not start dashboard forwards until their Services exist. Measure preparation separately from step 1's connection confirmation in the next pilot.
+Verify the actual Bash-resolved OCI CLI, kubectl, Helm, Git, and curl. Supply the assigned cluster name, OCID, region, compartment, and prepared OCI identity. Guide students through Console-based kubeconfig setup during the lecture after their cluster is ready. They obtain their own `~/.kube/oke-lab`; do not distribute an instructor's credentials. Verify any required OCI environment settings in **each fresh terminal**, especially for the Cloud Shell download alternative. Arrange Helm install permissions separately; students do not troubleshoot credentials or permissions during the hour. Open three labeled Bash terminals (commands, Kiali, Grafana), the student values file in the editor, and the completion sheet. Keep terminal 1 open after preparation so its kubeconfig and chart-version variables remain available. Do not start dashboard forwards until their Services exist. Measure preparation separately from step 1's connection confirmation in the next pilot.
 
 At workshop minute 20:
 
 1. Inspect each session's provisioning job. A visible Luna desktop is not proof that OKE is ready. Record pending/failed sessions and assign a helper.
-2. For clusters with a reachable API, run the following from the prepared checkout with that learner's kubeconfig and OCI environment. Replace the placeholder with the independently assigned context:
+2. For clusters with a reachable API, run the following from the prepared checkout with that learner's kubeconfig and OCI environment. The check uses that kubeconfig's current context:
 
    ```bash
-   bash scripts/check-ready.sh --context '<instructor-assigned-context>'
+   bash scripts/check-ready.sh
    ```
 
 3. Check the managed Cert Manager and Metrics Server add-ons are healthy and that permissions and image access have been validated. Confirm the materials revision and `prepare-charts.sh --check` in the learner's checkout. The cluster preflight does **not** prove Helm install permissions, all scheduling constraints, or future LoadBalancer availability.

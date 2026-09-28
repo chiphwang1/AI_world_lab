@@ -56,7 +56,7 @@ class ClusterAccessMaterials(unittest.TestCase):
         self.assertIn('export KUBECONFIG="$HOME/.kube/oke-lab"', readme)
         self.assertIn("Do not add `--overwrite`", readme)
         self.assertIn("Example page only—not a shared student cluster", readme)
-        self.assertIn("bash scripts/check-ready.sh --context", readme)
+        self.assertIn("bash scripts/check-ready.sh", readme)
 
     def test_kubeconfig_is_created_before_commands_only_verification(self):
         readme = (ROOT / "README.md").read_text()
@@ -90,7 +90,7 @@ class ClusterAccessMaterials(unittest.TestCase):
         export = 'export KUBECONFIG="$HOME/.kube/oke-lab"'
         self.assertEqual(core.count(export), 3)
         self.assertEqual(core.split("## 2.", 1)[0].count(export), 1)
-        self.assertEqual(core.count("bash scripts/check-ready.sh --context"), 1)
+        self.assertEqual(core.count("bash scripts/check-ready.sh"), 1)
         self.assertEqual(core.count("bash scripts/prepare-charts.sh --check"), 1)
         self.assertNotIn("LAB_CONTEXT", readme)
         self.assertNotIn("kubectl --context", core)

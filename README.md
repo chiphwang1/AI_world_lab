@@ -26,7 +26,7 @@ The diagram shows the documented setup after traffic and autoscaling are enabled
 
 | Approximate hands-on minutes | Exercise | What you will demonstrate |
 |---|---|---|
-| 0–5 | 1. Confirm your connection | Verify your prepared terminal, assigned cluster, and resource metrics |
+| 0–5 | 1. Prepare your connection | Download the lab files, connect to your assigned cluster, and verify resource metrics |
 | 5–23 | 2. Install mesh and monitoring | Install Istio, Prometheus, Kiali, and Grafana with Helm |
 | 23–33 | 3. Build and run | Customize and deploy two replicas with an OCI LoadBalancer |
 | 33–40 | 4. Observe traffic | Interpret the Kiali graph and Grafana baseline |
@@ -41,7 +41,9 @@ These times are estimates from the start of hands-on work, after the 30-minute l
 
 Start the lab at the beginning of the lecture. This starts cluster provisioning, which can take some time. Continue when the instructor confirms that your assigned cluster is ready.
 
-In a **Bash terminal** on your Luna desktop, download the lab repository:
+## 1. Prepare and confirm your connection — 5 minutes
+
+In a **Bash terminal** on your Luna desktop, download the lab repository. Keep this window open as **terminal 1**:
 
 ```bash
 git clone --branch lab-2026-09-25.1 --single-branch \
@@ -95,13 +97,13 @@ kubectl config current-context
 
 ### Check cluster readiness
 
-Continue in **terminal 1** at the repository root. `KUBECONFIG` is already set in this terminal, and the selected context stays saved in the file until changed. Run this preflight once, replacing `<instructor-assigned-context>` with the exact name supplied by the instructor:
+In terminal 1, run preflight from the repository root:
 
 ```bash
-bash scripts/check-ready.sh --context '<instructor-assigned-context>'
+bash scripts/check-ready.sh
 ```
 
-This read-only check verifies files, tool availability, the assigned context, API access, version compatibility, two Ready workers, and resource metrics. OCI CLI is still required: the kubeconfig uses it to generate authentication tokens. The script never selects a context or installs anything.
+Preflight uses the current context in your kubeconfig. Each learner's kubeconfig contains only their assigned cluster, so no instructor-provided context name is needed. It checks files, tools, API access, version compatibility, two Ready workers, and resource metrics. It does not select a context or install anything. Keep OCI CLI available: kubeconfig uses it to generate authentication tokens.
 
 Expected output includes these lines, followed by numeric CPU/memory readings; actual values vary:
 
@@ -123,7 +125,7 @@ Expect five `PASS Prepared chart` lines. If a chart is missing or mismatched, as
 
 Preparation is complete when the cluster preflight passes and all five prepared charts pass. Start the timed exercises only after the instructor confirms you are ready.
 
-## 1. Confirm your prepared connection — 5 minutes
+### Confirm your prepared connection
 
 Continue in the same **terminal 1**. These read-only commands confirm your working directory and saved context, list the workers, and show their CPU and memory readings. They do not change your context or install anything:
 

@@ -19,7 +19,7 @@ if args == ["config", "current-context"]:
         sys.exit(1)
     print(os.environ.get("MOCK_CONTEXT", "assigned-lab"))
     sys.exit(0)
-assert args[:3] == ["--context", "assigned-lab", "--request-timeout=15s"], args
+assert args[0] == "--context" and args[2] == "--request-timeout=15s", args
 args = args[3:]
 if args == ["version", "--client", "-o", "json"]:
     print(json.dumps({"clientVersion": {"gitVersion": os.environ.get("CLIENT_VERSION", "v1.36.0")}}))
@@ -69,7 +69,7 @@ class CheckReady(unittest.TestCase):
             log = directory / "calls"
             result = subprocess.run(
                 ["/bin/bash", str(ROOT / "scripts/check-ready.sh"),
-                 *(arguments if arguments is not None else ["--context", "assigned-lab"])],
+                 *(arguments if arguments is not None else [])],
                 cwd=directory if wrong_directory else ROOT,
                 env={**os.environ, "PATH": str(binary_dir), "CALL_LOG": str(log),
                      "KUBECONFIG": selected_config, **overrides},
@@ -78,22 +78,22 @@ class CheckReady(unittest.TestCase):
             calls = [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
             return result, calls
 
-    def test_pass_uses_only_allowlisted_read_commands_and_pins_context(self):
+    def test_pass_uses_only_allowlisted_read_commands_and_pins_current_context(self):
         result, calls = self.run_check()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Preflight passed", result.stdout)
         self.assertEqual(len(calls), 5)
         self.assertTrue(all(call[:2] == ["--context", "assigned-lab"] for call in calls[1:]))
 
-    def test_wrong_context_stops_before_cluster_api_access(self):
+    def test_uses_the_current_context_without_an_expected_context_argument(self):
         result, calls = self.run_check(MOCK_CONTEXT="production")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("no cluster API requests", result.stderr)
-        self.assertEqual(calls, [["config", "current-context"]])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Selected context: production", result.stdout)
+        self.assertTrue(all(call[:2] == ["--context", "production"] for call in calls[1:]))
 
     def test_bad_arguments_do_not_invoke_tools(self):
-        for arguments in ([], ["--context"], ["--context", ""],
-                          ["--context", "<assigned-context>"], ["--unknown", "assigned-lab"]):
+        for arguments in (["--context"], ["--context", "assigned-lab"],
+                          ["--unknown", "assigned-lab"]):
             with self.subTest(arguments=arguments):
                 result, calls = self.run_check(arguments=arguments)
                 self.assertNotEqual(result.returncode, 0)
