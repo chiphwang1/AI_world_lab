@@ -96,12 +96,13 @@ class ClusterAccessMaterials(unittest.TestCase):
         self.assertNotIn("setup during the lecture", access)
         self.assertNotIn("clones it during the lecture", instructor)
 
-    def test_chart_delivery_is_explicit_after_cloning(self):
+    def test_students_download_charts_during_hands_on(self):
         readme = (ROOT / "README.md").read_text()
         instructor = (ROOT / "docs/instructor-guide.md").read_text()
-        self.assertIn("after cloning; Git does not include them", readme)
-        self.assertIn("newly cloned `.lab-cache/charts/` directory", instructor)
-        self.assertIn("before their `--check` command", instructor)
+        self.assertIn("download the five pinned Helm charts", readme)
+        self.assertNotIn("instructor supplies", readme)
+        self.assertIn("Students download the charts in hands-on step 1", instructor)
+        self.assertNotIn("instructor chart delivery", instructor)
 
     def test_setup_runs_once_and_new_dashboard_terminals_select_the_same_file(self):
         readme = (ROOT / "README.md").read_text()

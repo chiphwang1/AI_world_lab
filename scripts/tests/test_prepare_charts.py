@@ -74,6 +74,7 @@ class PrepareCharts(unittest.TestCase):
         result = self.run_script("--check")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Missing chart", result.stderr)
+        self.assertIn("bash scripts/prepare-charts.sh --download", result.stderr)
         self.assertFalse(self.cache.exists())
         self.assertEqual(self.calls(), [])
 
@@ -113,6 +114,8 @@ class PrepareCharts(unittest.TestCase):
         result = self.run_script("--download", HELM_TEST_FAIL_PULL="1")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Download failed", result.stderr)
+        self.assertIn("retry --download", result.stderr)
+        self.assertNotIn("before class", result.stderr)
         self.assertFalse((self.cache / "base-1.31.0.tgz").exists())
         self.assertEqual(len(list(self.cache.glob(".download.*/base-1.31.0.tgz"))), 1)
 

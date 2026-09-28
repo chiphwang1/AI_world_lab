@@ -14,7 +14,7 @@ This lab assumes you can navigate a terminal, copy commands, and edit a YAML val
 
 Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private.
 
-Materials revision: `lab-2026-09-28.2`. Your checkout and Luna instructions must show this same revision.
+Materials revision: `lab-2026-09-28.3`. Your checkout and Luna instructions must show this same revision.
 
 Record checkpoints in the [completion sheet (PDF)](docs/completion-sheet.pdf) or [Markdown version](docs/completion-sheet.md). You can save or print the PDF.
 
@@ -46,7 +46,7 @@ Start the Luna lab when the lecture begins so the cluster can provision during t
 In a **Bash terminal** on your Luna desktop, download the lab repository. Keep this window open as **terminal 1**:
 
 ```bash
-git clone --branch lab-2026-09-28.2 --single-branch \
+git clone --branch lab-2026-09-28.3 --single-branch \
   https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&
   cd "$HOME/oke-bootcamp"
 ```
@@ -112,14 +112,15 @@ PASS Resource metrics: numeric CPU and memory for both workers
 
 Continue only after `Preflight passed`. On `FAIL`, follow its message or ask the instructor; see [preflight troubleshooting](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#preflight-fails).
 
-The instructor supplies the five chart archives in your checkout's `.lab-cache/charts/` directory after cloning; Git does not include them. Load chart-version variables such as `ISTIO_VERSION` and check the archives; these commands do not download or install charts:
+Load the chart-version variables, download the five pinned Helm charts, and check the files. Downloads are saved in `.lab-cache/charts/`; these commands do not install anything in the cluster:
 
 ```bash
 source helm/versions.env
+bash scripts/prepare-charts.sh --download &&
 bash scripts/prepare-charts.sh --check
 ```
 
-Expect five `PASS Prepared chart` lines; ask the instructor to resolve missing or mismatched archives. The Git tag pins lab files, and `helm/versions.env` pins upstream charts.
+Expect five `PASS Prepared chart` lines from each successful command. Matching downloads are reused if you rerun it. On failure, follow the message or ask for help. The Git tag pins lab files, and `helm/versions.env` pins upstream charts.
 
 Continue after preflight and all five chart checks pass. Keep terminal 1 open for later commands.
 
@@ -163,7 +164,7 @@ A **namespace** groups resources: monitoring uses `istio-system`; the app uses `
 
 Istio uses **sidecar mode**, adding a proxy beside each app container.
 
-A **chart** packages Kubernetes templates; a **release** is its named installation. `upgrade --install` creates or updates a release, `-f` supplies lab values, and `--wait` waits for readiness. The instructor prepares chart archives; you install them. Workers may still need to pull images.
+A **chart** packages Kubernetes templates; a **release** is its named installation. `upgrade --install` creates or updates a release, `-f` supplies lab values, and `--wait` waits for readiness. You install the charts downloaded in step 1. Workers may still need to pull images.
 
 **For every Helm install or upgrade:** expect `STATUS: deployed` and a returned prompt. Ask for help on errors or timeouts before continuing.
 

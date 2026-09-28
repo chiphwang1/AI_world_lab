@@ -44,7 +44,8 @@ class LabMaterials(unittest.TestCase):
                       '  cd "$HOME/oke-bootcamp"', readme)
         self.assertNotIn("git describe --tags --exact-match HEAD", readme)
         self.assertIn("bash scripts/prepare-charts.sh --check", readme)
-        self.assertNotIn("scripts/prepare-charts.sh --download", readme)
+        self.assertIn("bash scripts/prepare-charts.sh --download &&\n"
+                      "bash scripts/prepare-charts.sh --check", readme)
 
     def test_repository_download_is_one_instruction_and_command(self):
         readme = (ROOT / "README.md").read_text()
@@ -62,7 +63,8 @@ class LabMaterials(unittest.TestCase):
         self.assertNotIn("git clone --branch", preparation)
         for command in ("git clone --branch", "oci ce cluster create-kubeconfig",
                         "bash scripts/check-ready.sh",
-                        "source helm/versions.env", "bash scripts/prepare-charts.sh --check"):
+                        "source helm/versions.env", "bash scripts/prepare-charts.sh --download",
+                        "bash scripts/prepare-charts.sh --check"):
             with self.subTest(command=command):
                 self.assertIn(command, exercises)
         access = (ROOT / "docs/cluster-access.md").read_text()

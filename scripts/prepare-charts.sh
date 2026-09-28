@@ -9,7 +9,7 @@ fail() {
 
 if [[ $# != 1 || ( $1 != --download && $1 != --check ) ]]; then
   printf '%s\n' 'Usage: bash scripts/prepare-charts.sh --download | --check' >&2
-  printf '%s\n' 'Instructor: --download before class. Student: --check is read-only.' >&2
+  printf '%s\n' 'Use --download to fetch missing pinned charts, then --check to verify them without downloads. Neither installs releases.' >&2
   exit 1
 fi
 mode=$1
@@ -22,7 +22,7 @@ cache_dir="$repo_dir/.lab-cache/charts"
 
 check_archive() {
   local archive=$1 expected_name=$2 expected_version=$3 metadata actual_name actual_version
-  [[ -r "$archive" && -s "$archive" ]] || fail "Missing chart: $archive. Ask the instructor to prepare chart downloads."
+  [[ -r "$archive" && -s "$archive" ]] || fail "Missing chart: $archive. Run bash scripts/prepare-charts.sh --download, then retry --check."
   metadata=$(helm show chart "$archive") || fail "Cannot read chart: $archive. Ask the instructor to inspect it; existing files are never replaced."
   actual_name=$(sed -n 's/^name: *//p' <<< "$metadata")
   actual_version=$(sed -n 's/^version: *//p' <<< "$metadata")
@@ -40,7 +40,7 @@ prepare_chart() {
     # Use a separate directory so a failed download cannot become a ready archive.
     # On failure retain that directory for diagnosis; never remove user files.
     helm pull "$name" --repo "$repository" --version "$version" --destination "$staging" || \
-      fail "Download failed for $name. Retry before class; partial files remain in $staging."
+      fail "Download failed for $name. Check network access and retry --download; partial files remain in $staging."
     check_archive "$staging/$name-$version.tgz" "$name" "$version"
     mv -n "$staging/$name-$version.tgz" "$archive"
     rmdir "$staging" 2>/dev/null || true

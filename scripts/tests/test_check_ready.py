@@ -82,7 +82,7 @@ class CheckReady(unittest.TestCase):
         result, calls = self.run_check()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Preflight passed", result.stdout)
-        self.assertIn("Complete the chart archive checks and connection confirmation", result.stdout)
+        self.assertIn("Complete the chart downloads, archive checks, and connection confirmation", result.stdout)
         self.assertNotIn("separate instructor checks", result.stdout)
         self.assertEqual(len(calls), 5)
         self.assertTrue(all(call[:2] == ["--context", "assigned-lab"] for call in calls[1:]))
