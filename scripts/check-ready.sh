@@ -108,5 +108,5 @@ while read -r node _; do
 done <<< "$node_rows"
 pass 'Resource metrics: numeric CPU and memory for both workers'
 printf '%s\n' "$metrics"
-printf '\n%s\n' 'Preflight passed. Finish README step 1, then continue to step 2; Helm/chart downloads and install permissions are separate instructor checks.'
+printf '\n%s\n' 'Preflight passed. Complete the chart archive checks and connection confirmation in README step 1, then continue to step 2.'
 printf '%s\n' 'No context, kubeconfig, or cluster resources were changed. OCI authentication may use its normal local cache.'

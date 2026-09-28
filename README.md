@@ -14,7 +14,7 @@ This lab assumes you can navigate a terminal, copy commands, and edit a YAML val
 
 Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private.
 
-Materials revision: `lab-2026-09-28.1`. Your checkout and Luna instructions must show this same revision.
+Materials revision: `lab-2026-09-28.2`. Your checkout and Luna instructions must show this same revision.
 
 Record checkpoints in the [completion sheet (PDF)](docs/completion-sheet.pdf) or [Markdown version](docs/completion-sheet.md). You can save or print the PDF.
 
@@ -46,7 +46,7 @@ Start the Luna lab when the lecture begins so the cluster can provision during t
 In a **Bash terminal** on your Luna desktop, download the lab repository. Keep this window open as **terminal 1**:
 
 ```bash
-git clone --branch lab-2026-09-28.1 --single-branch \
+git clone --branch lab-2026-09-28.2 --single-branch \
   https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&
   cd "$HOME/oke-bootcamp"
 ```
@@ -112,7 +112,7 @@ PASS Resource metrics: numeric CPU and memory for both workers
 
 Continue only after `Preflight passed`. On `FAIL`, follow its message or ask the instructor; see [preflight troubleshooting](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#preflight-fails).
 
-Load chart-version variables such as `ISTIO_VERSION` and check the local archives; these commands do not download or install charts:
+The instructor supplies the five chart archives in your checkout's `.lab-cache/charts/` directory after cloning; Git does not include them. Load chart-version variables such as `ISTIO_VERSION` and check the archives; these commands do not download or install charts:
 
 ```bash
 source helm/versions.env

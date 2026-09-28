@@ -1,22 +1,22 @@
-# Access your assigned OKE cluster
+# Access your OKE cluster
 
-Use this page to obtain your own kubeconfig using the OCI Console, or if selecting the cluster fails. Complete access setup during the lecture, once your assigned cluster is ready, before the 60-minute hands-on clock starts. Return to the README's connection checks in [step 1](../README.md#1-prepare-and-confirm-your-connection--5-minutes). If access remains blocked, ask the instructor before starting the timed exercises.
+Use this page for additional kubeconfig instructions or access troubleshooting during hands-on [step 1](../README.md#1-prepare-and-confirm-your-connection--5-minutes). Before hands-on, students only start the Luna lab so their cluster can provision during the lecture. Ask the instructor for help if access is blocked.
 
 ## Start with your Luna session
 
 Follow [Find your lab login and compartment](../README.md#find-your-lab-login-and-compartment): open the **Luna-Lab** desktop icon (also labeled **Luna Lab**), choose **Quick Links → OCI Console**, and sign in with your assigned username and password from **Credentials**. Do not use the SSO Link. Paste with **Ctrl+V** or right-click **Paste**, then click **Sign In**. Find your assigned region and **Compartment Name** in **Lab Details** or the page's **Oracle Cloud** section. Missing login/session details require instructor help, not Terraform-log inspection or a new personal account.
 
-In the Console, select the assigned region. Open the navigation menu, then **Developer Services → Containers & Artifacts → Kubernetes Clusters (OKE)**. In the **Compartment** filter, expand the hierarchy if needed and select the exact compartment shown on your Luna Lab page. Check the region and compartment each time you open a resource list; do not infer the assignment from a `luna` name prefix. Select your assigned cluster and verify its name and OCID. Open **Actions → Access cluster → Local Access** and copy the displayed command's cluster OCID and region into the example below. Run it in the **Luna desktop's Bash terminal**. Console login does not authenticate this terminal; its OCI CLI identity must already be configured. See [Oracle's cluster access guide](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm).
+In the Console, select the session's region. Open the navigation menu, then **Developer Services → Containers & Artifacts → Kubernetes Clusters (OKE)**. In the **Compartment** filter, expand the hierarchy if needed and select the exact compartment shown on your Luna Lab page. Open the cluster Luna created for you; wait if it is still provisioning. Open **Actions → Access cluster → Local Access** and copy the displayed command's cluster OCID and region into the example below. Run it in the **Luna desktop's Bash terminal**. Console login does not authenticate this terminal; its OCI CLI identity must already be configured. See [Oracle's cluster access guide](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm).
 
 ## Generate your kubeconfig on the desktop
 
-Use the cluster OCID and region from your assigned cluster's Console access command. An OCID is OCI's resource identifier. Confirm the expected cluster name and desktop OCI profile with the instructor. API credentials should already be configured in `~/.oci/config`; do not generate new keys for this exercise. `DEFAULT` is appropriate only if the instructor confirms it identifies this session.
+Use the cluster OCID and region from your cluster's Console access command. An OCID is OCI's resource identifier. Use the desktop OCI profile configured for your Luna session in `~/.oci/config`; ask for help if you cannot identify it. Use `DEFAULT` only if that is your session's profile. Do not generate new API keys for this exercise.
 
 Replace the three placeholders below before running. This example uses the lab's API-key authentication and public Kubernetes endpoint:
 
 ```bash
 export LAB_REGION='<your-session-region>'
-export LAB_CLUSTER_OCID='<your-assigned-cluster-ocid>'
+export LAB_CLUSTER_OCID='<your-cluster-ocid>'
 export LAB_OCI_PROFILE='<your-session-profile>'
 export KUBECONFIG="$HOME/.kube/oke-lab"
 umask 077
@@ -64,15 +64,15 @@ kubectl config get-contexts
 kubectl config current-context
 ```
 
-Compare the context with the assignment from the instructor. If the assigned context appears in the list but is not current, copy its exact name:
+The kubeconfig command selects your cluster's context. If the file contains only that context, no selection command is needed. If you use a file with multiple contexts and need to switch back to your Luna cluster, copy its context name from the list:
 
 ```bash
-kubectl config use-context '<assigned-context-name-from-the-list>'
+kubectl config use-context '<your-cluster-context-name-from-the-list>'
 ```
 
 This saves the selection in the kubeconfig. New terminals using that file share the saved context; repeat `use-context` only when you need to switch it. `kubectl config current-context` and the lab preflight check the selection without changing it.
 
-If the assigned context is absent, confirm the file path or generate the kubeconfig above. `no context exists` refers to the selected file; the same context may exist in another kubeconfig. After selecting the assigned context, return to the README's read-only preflight check.
+If your cluster's context is absent, confirm the file path or generate the kubeconfig above. `no context exists` refers to the selected file; the same context may exist in another kubeconfig. Return to the README's read-only preflight check, which uses the current context without a `--context` argument.
 
 For the maintainer's existing local rehearsal, follow [the rehearsal environment instructions](rehearsal-2026-09-18.md#reuse-and-ongoing-cost). That environment uses a dedicated project kubeconfig; its private files are not distributed to learners. When using that path, use it consistently in the dashboard terminals too.
 
@@ -89,7 +89,7 @@ oci ce cluster list --compartment-id "$LAB_COMPARTMENT_OCID" \
   --query 'data[].{Name:name,State:"lifecycle-state",OCID:id}' --output table
 ```
 
-Match the name to your assignment and confirm `ACTIVE`. Do not choose another learner's cluster or infer ownership from `ACTIVE` alone. If the assigned cluster is missing or ambiguous, ask the instructor. Oracle documents pagination and filters in the [cluster list reference](https://docs.oracle.com/en-us/iaas/tools/oci-cli/latest/oci_cli_docs/cmdref/ce/cluster/list.html).
+Find the cluster Luna created in your session's compartment and confirm `ACTIVE`. If the result is missing or ambiguous, ask for help. Oracle documents pagination and filters in the [cluster list reference](https://docs.oracle.com/en-us/iaas/tools/oci-cli/latest/oci_cli_docs/cmdref/ce/cluster/list.html).
 
 ## Instructor reference: which OCI commands belong in the lab?
 
@@ -113,13 +113,13 @@ git --version
 curl --version
 ```
 
-Using the learner's identity and assigned cluster context, check permissions before class:
+During a rehearsal, use a test Luna session's identity and cluster context to check permissions:
 
 ```bash
 kubectl auth can-i create customresourcedefinitions.apiextensions.k8s.io
 kubectl auth can-i create clusterroles.rbac.authorization.k8s.io
 ```
 
-Both should return `yes`. These checks assess permission to create Istio's extra resource types and the charts' cluster-level role definitions; they do not create resources or grant access. They cover only two actions, so also verify the complete Helm installation with the learner's identity during rehearsal. Permission checks are instructor preflight, not student exercise steps.
+Both should return `yes`. These checks assess permission to create Istio's extra resource types and the charts' cluster-level role definitions; they do not create resources or grant access. They cover only two actions, so also verify the complete Helm installation with the test session's identity during rehearsal. This validates the lab configuration; it is not a per-student instructor sign-off.
 
 Verify the actual connection, cluster permissions, repository access, and chart/image downloads as well; a version check alone does not prove readiness. See Oracle's [token generation](https://docs.oracle.com/en-us/iaas/tools/oci-cli/latest/oci_cli_docs/cmdref/ce/cluster/generate-token.html) and [cluster options](https://docs.oracle.com/en-us/iaas/tools/oci-cli/latest/oci_cli_docs/cmdref/ce/cluster-options/get.html) references.

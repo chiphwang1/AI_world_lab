@@ -80,9 +80,28 @@ class ClusterAccessMaterials(unittest.TestCase):
         access = (ROOT / "docs/cluster-access.md").read_text()
         instructor = (ROOT / "docs/instructor-guide.md").read_text()
         self.assertIn("../README.md#find-your-lab-login-and-compartment", access)
-        self.assertIn("Use the cluster OCID and region from your assigned cluster's Console access command", access)
+        self.assertIn("Use the cluster OCID and region from your cluster's Console access command", access)
         self.assertIn("verify an actual Luna session exposes", instructor)
         self.assertIn("browser login alone is insufficient", instructor)
+
+    def test_access_setup_is_in_hands_on_and_context_selection_is_optional(self):
+        access = (ROOT / "docs/cluster-access.md").read_text()
+        instructor = (ROOT / "docs/instructor-guide.md").read_text()
+        self.assertIn("during hands-on [step 1]", access)
+        self.assertIn("only that context, no selection command is needed", access)
+        self.assertIn("uses the current context without a `--context` argument", access)
+        self.assertNotIn("assignment from the instructor", access)
+        self.assertIn("do no further setup during the lecture", instructor)
+        self.assertIn("Count all step 1 setup within the hands-on hour", instructor)
+        self.assertNotIn("setup during the lecture", access)
+        self.assertNotIn("clones it during the lecture", instructor)
+
+    def test_chart_delivery_is_explicit_after_cloning(self):
+        readme = (ROOT / "README.md").read_text()
+        instructor = (ROOT / "docs/instructor-guide.md").read_text()
+        self.assertIn("after cloning; Git does not include them", readme)
+        self.assertIn("newly cloned `.lab-cache/charts/` directory", instructor)
+        self.assertIn("before their `--check` command", instructor)
 
     def test_setup_runs_once_and_new_dashboard_terminals_select_the_same_file(self):
         readme = (ROOT / "README.md").read_text()
