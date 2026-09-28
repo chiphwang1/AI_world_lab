@@ -14,7 +14,7 @@ This lab assumes you can navigate a terminal, copy commands, and edit a YAML val
 
 Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private.
 
-Materials revision: `lab-2026-09-28.4`. Your checkout and Luna instructions must show this same revision.
+Materials revision: `lab-2026-09-28.5`. Your checkout and Luna instructions must show this same revision.
 
 Record checkpoints in the [completion sheet (PDF)](docs/completion-sheet.pdf) or [Markdown version](docs/completion-sheet.md). You can save or print the PDF.
 
@@ -46,7 +46,7 @@ Start the Luna lab when the lecture begins so the cluster can provision during t
 In a **Bash terminal** on your Luna desktop, download the lab repository. Keep this window open as **terminal 1**:
 
 ```bash
-git clone --branch lab-2026-09-28.4 --single-branch \
+git clone --branch lab-2026-09-28.5 --single-branch \
   https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&
   cd "$HOME/oke-bootcamp"
 ```
@@ -145,6 +145,8 @@ Expect a path ending in `oke-bootcamp`, your cluster's context, two `Ready` work
 
 ### What the tools do
 
+The tools in this lab are commonly used to deploy, manage, and monitor applications running on Kubernetes clusters.
+
 | Tool or component | Purpose in this lab | Setup |
 |---|---|---|
 | Helm | Installs and upgrades Kubernetes resources packaged as charts. | Already on the desktop |
@@ -166,7 +168,7 @@ A **namespace** groups resources: monitoring uses `istio-system`; the app uses `
 
 Istio uses **sidecar mode**, adding a proxy beside each app container.
 
-A **chart** packages Kubernetes templates; a **release** is its named installation. `upgrade --install` creates or updates a release, `-f` supplies lab values, and `--wait` waits for readiness. You install the charts downloaded in step 1. Workers may still need to pull images.
+A **Helm chart** packages Kubernetes templates; a **release** is its named installation. `upgrade --install` creates or updates a release, `-f` supplies lab values, and `--wait` waits for readiness. You install the charts downloaded in step 1. Workers may still need to pull images.
 
 **For every Helm install or upgrade:** expect `STATUS: deployed` and a returned prompt. Ask for help on errors or timeouts before continuing.
 
@@ -233,7 +235,7 @@ Kiali and Grafana allow anonymous, read-only access. **Never expose them with a 
 
 A **Deployment** maintains application copies (replicas), each in a **Pod** with an Istio proxy. A **Service** provides a stable address as pods change. Helm creates these objects from the app chart.
 
-Helm is a package manager for Kubernetes: it combines a chart's templates with settings from a **values file** to create or update resources. Here, `helm/values/student.yaml` overrides the app chart's defaults without changing its templates. The `message` setting becomes the `APP_MESSAGE` environment variable in the app container and the text returned in its HTTP response. See [Helm values files](https://helm.sh/docs/chart_template_guide/values_files/).
+The **values file** `helm/values/student.yaml` overrides the app chart's defaults without changing its templates. The `message` setting becomes the `APP_MESSAGE` environment variable in the app container and the text returned in its HTTP response. See [Helm values files](https://helm.sh/docs/chart_template_guide/values_files/).
 
 From the repository root, open `helm/values/student.yaml` in your preferred desktop editor, or use Vim in terminal 1:
 
