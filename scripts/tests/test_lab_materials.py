@@ -89,6 +89,44 @@ class LabMaterials(unittest.TestCase):
         for concept in ("**Deployment**", "**Pod**", "**Service**"):
             self.assertLess(deployment.index(concept), deployment.index("helm upgrade --install"))
 
+    def test_application_configuration_and_deployment_are_explained(self):
+        readme = (ROOT / "README.md").read_text()
+        deployment = readme.split("## 3.", 1)[1].split("## 4.", 1)[0]
+        for detail in ("Configure and deploy", "values file", "APP_MESSAGE",
+                       "vim helm/values/student.yaml", "`:wq`",
+                       "Saving the file does not change the cluster",
+                       "ConfigMap", "two replicas", "without deploying anything",
+                       "traffic generator and HPA are disabled initially"):
+            with self.subTest(detail=detail):
+                self.assertIn(detail, deployment)
+
+    def test_public_ip_explanation_retains_reusable_variable(self):
+        readme = (ROOT / "README.md").read_text()
+        deployment = readme.split("## 3.", 1)[1].split("## 4.", 1)[0]
+        self.assertIn('APP_IP=$(kubectl -n oke-lab get svc hello-oke', deployment)
+        for detail in ("`EXTERNAL-IP`", "`-o jsonpath=...`", "`$(...)`",
+                       "only in this terminal", "HTTP, not HTTPS"):
+            with self.subTest(detail=detail):
+                self.assertIn(detail, deployment)
+
+    def test_generator_inspection_distinguishes_request_sender_from_app(self):
+        readme = (ROOT / "README.md").read_text()
+        deployment = readme.split("## 3.", 1)[1].split("## 4.", 1)[0]
+        self.assertLess(deployment.index("--set traffic.enabled=true"),
+                        deployment.index("kubectl -n oke-lab get pods -l app=hello-oke-traffic"))
+        self.assertIn("application pod, not the generator", deployment)
+        self.assertIn("snapshot", deployment)
+        appendix = readme.split("### Traffic generator pod", 1)[1]
+        self.assertIn("kubectl -n oke-lab describe pods -l app=hello-oke-traffic", appendix)
+        self.assertIn("does not use the public `APP_IP`", appendix)
+
+    def test_upstream_software_is_distinguished_from_lab_configuration(self):
+        readme = (ROOT / "README.md").read_text()
+        self.assertIn("upstream open-source tools", readme)
+        self.assertIn("do not modify their application source code", readme)
+        self.assertIn("lab-specific settings", readme)
+        self.assertIn("custom training materials", readme)
+
     def test_hpa_inspection_follows_creation(self):
         readme = (ROOT / "README.md").read_text()
         before_scaling, scaling = readme.split("## 5.", 1)

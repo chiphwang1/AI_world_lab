@@ -14,7 +14,7 @@ This lab assumes you can navigate a terminal, copy commands, and edit a YAML val
 
 Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private.
 
-Materials revision: `lab-2026-09-28.3`. Your checkout and Luna instructions must show this same revision.
+Materials revision: `lab-2026-09-28.4`. Your checkout and Luna instructions must show this same revision.
 
 Record checkpoints in the [completion sheet (PDF)](docs/completion-sheet.pdf) or [Markdown version](docs/completion-sheet.md). You can save or print the PDF.
 
@@ -28,7 +28,7 @@ The diagram shows the setup after traffic and autoscaling are enabled, not live 
 |---|---|---|
 | 0–5 | 1. Prepare your connection | Download lab files, connect to your cluster, and verify resource metrics |
 | 5–23 | 2. Install mesh and monitoring | Install Istio, Prometheus, Kiali, and Grafana with Helm |
-| 23–33 | 3. Build and run | Customize and deploy two replicas with an OCI LoadBalancer |
+| 23–33 | 3. Configure and deploy | Customize and deploy two replicas with an OCI LoadBalancer |
 | 33–40 | 4. Observe traffic | Interpret the Kiali graph and Grafana baseline |
 | 40–55 | 5. Scale | Scale manually, then observe CPU-driven scale-out and scale-in |
 | 55–60 | 7. Debrief and buffer | Explain your observations and absorb delays |
@@ -46,7 +46,7 @@ Start the Luna lab when the lecture begins so the cluster can provision during t
 In a **Bash terminal** on your Luna desktop, download the lab repository. Keep this window open as **terminal 1**:
 
 ```bash
-git clone --branch lab-2026-09-28.3 --single-branch \
+git clone --branch lab-2026-09-28.4 --single-branch \
   https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&
   cd "$HOME/oke-bootcamp"
 ```
@@ -158,6 +158,8 @@ Expect a path ending in `oke-bootcamp`, your cluster's context, two `Ready` work
 
 `kubectl` manages Kubernetes resources; OCI CLI authenticates the connection. Both are preinstalled. The [architecture diagram](docs/architecture.md) separates dashboard and HPA metrics paths.
 
+Istio, Prometheus, Kiali, and Grafana are upstream open-source tools installed from published Helm charts and container images. We do not modify their application source code, but we supply lab-specific settings for resource limits, metrics collection, and dashboard access, plus a custom Grafana dashboard. Grafana uses the [open-source image](https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/). The `hello-oke` application and its chart are custom training materials in this repository.
+
 A **namespace** groups resources: monitoring uses `istio-system`; the app uses `oke-lab`. Select it with Helm's `--namespace` or kubectl's `-n`.
 
 ### Install Istio
@@ -227,19 +229,33 @@ Kiali and Grafana allow anonymous, read-only access. **Never expose them with a 
 
 **Checkpoint:** all five releases (`istio-base`, `istiod`, `prometheus`, `kiali-server`, `grafana`) show deployed and workload pods are ready. Why install Istio base first? Why does Grafana need Prometheus?
 
-## 3. Build and run the application — 10 minutes
+## 3. Configure and deploy the application — 10 minutes
 
 A **Deployment** maintains application copies (replicas), each in a **Pod** with an Istio proxy. A **Service** provides a stable address as pods change. Helm creates these objects from the app chart.
 
-Open `helm/values/student.yaml` in the desktop editor and customize `message`, for example:
+Helm is a package manager for Kubernetes: it combines a chart's templates with settings from a **values file** to create or update resources. Here, `helm/values/student.yaml` overrides the app chart's defaults without changing its templates. The `message` setting becomes the `APP_MESSAGE` environment variable in the app container and the text returned in its HTTP response. See [Helm values files](https://helm.sh/docs/chart_template_guide/values_files/).
+
+From the repository root, open `helm/values/student.yaml` in your preferred desktop editor, or use Vim in terminal 1:
+
+```bash
+vim helm/values/student.yaml
+```
+
+In Vim, press `i` to edit. Change only `message`, for example:
 
 ```yaml
 message: "Hello from YOUR-NAME's OKE lab"
 ```
 
-Replace `YOUR-NAME`, save, and leave replicas and resource settings unchanged. **Build** here means configuring the deployment; the chart supplies Python code and its runtime. No image registry account is needed.
+Replace `YOUR-NAME` and leave replicas and resource settings unchanged. In Vim, press `Esc`, type `:wq`, and press Enter to save and exit. Saving the file does not change the cluster; the Helm command below applies it. The chart supplies Python code and uses a published Python runtime image, so you do not build an image or need an image registry account.
 
-Lint the chart, install release `hello-oke`, then list its Deployment (`deploy`), pods, and Service (`svc`):
+The app chart creates a Deployment with two replicas, a ConfigMap holding the Python application code, and a LoadBalancer Service. Istio adds the proxy to each new pod. The traffic generator and HPA are disabled initially; you enable them later.
+
+Run these commands in order:
+
+- `helm lint` checks the chart with your values without deploying anything. Continue only if it passes.
+- `helm upgrade --install` installs or updates release `hello-oke` from the local chart in namespace `oke-lab`. `-f` applies your values; `--wait --timeout 10m` waits up to ten minutes for readiness.
+- `kubectl get` lists the Deployment (`deploy`), pods, and Service (`svc`) so you can check the result.
 
 ```bash
 helm lint ./charts/oke-mesh-app -f helm/values/student.yaml --strict
@@ -252,12 +268,15 @@ Expect `0 chart(s) failed` (an icon recommendation is informational), a `2/2` Re
 
 For optional container inspection or troubleshooting, see [Appendix B](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#appendix-b-optional-pod-inspection).
 
-The Service requests an OCI LoadBalancer. Save its public IP for later commands:
+The Service requests an OCI LoadBalancer. Display the Service, then save its `EXTERNAL-IP` for later commands:
 
 ```bash
+kubectl -n oke-lab get svc hello-oke
 APP_IP=$(kubectl -n oke-lab get svc hello-oke -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 echo "$APP_IP"
 ```
+
+`kubectl get svc` reads the Service; `-o jsonpath=...` extracts its public IP. Bash's `$(...)` captures that output in `APP_IP`, and `echo` displays it. Later commands use `${APP_IP}` so you do not need to paste the address repeatedly. This variable is available only in this terminal; rerun the assignment if you open a new one with your lab connection settings.
 
 If blank, check `kubectl -n oke-lab get svc hello-oke`. For `<pending>`, wait 30 seconds and rerun the assignment and echo; ask for help after three minutes. Continue once `APP_IP` contains an IP.
 
@@ -273,17 +292,22 @@ Expected response (illustrative; your message and pod name will differ):
 {"message":"Hello from YOUR-NAME's OKE lab","pod":"hello-oke-example-abc12","work":false}
 ```
 
-You can also open `http://<EXTERNAL-IP>/` in the desktop browser. Backends may become healthy after IP assignment: retry HTTP after 15–30 seconds; ask for help after a minute ([troubleshooting](docs/troubleshooting.md)). This public, unauthenticated endpoint must contain only training data.
+You can also open `http://<EXTERNAL-IP>/` in the desktop browser, replacing `<EXTERNAL-IP>` with the displayed address. Use **HTTP, not HTTPS**: this lab Service exposes port 80 without TLS. Backends may become healthy after IP assignment: retry HTTP after 15–30 seconds; ask for help after a minute ([troubleshooting](docs/troubleshooting.md)). This public, unauthenticated endpoint must contain only training data.
 
-Enable baseline traffic and inspect its logs. `--reuse-values` keeps your existing release settings, including your message; `--set traffic.enabled=true` enables the generator:
+The traffic generator is a separate Deployment with one pod. Its `traffic` container sends HTTP requests to the in-cluster `hello-oke` Service about every two seconds, creating traffic for Kiali and Grafana to display.
+
+Enable baseline traffic, find the generator pod, and inspect its logs. `--reuse-values` keeps your existing release settings, including your message; `--set traffic.enabled=true` enables the generator:
 
 ```bash
 helm upgrade hello-oke ./charts/oke-mesh-app --namespace oke-lab \
   --reuse-values --set traffic.enabled=true --wait --timeout 10m
+kubectl -n oke-lab get pods -l app=hello-oke-traffic
 kubectl -n oke-lab logs -l app=hello-oke-traffic -c traffic --prefix --timestamps --tail=10
 ```
 
-Expect JSON responses with your message and pod names about every two seconds. Leave the generator running.
+Expect one generator pod showing `2/2 Running` (`traffic` and its Istio proxy). `-l app=hello-oke-traffic` selects the generator pod; `-c traffic` selects its request-sending container. The logs show the last ten lines with timestamps and pod/container prefixes. The JSON lines are responses received from `hello-oke`, so their `pod` field identifies an application pod, not the generator. This command shows a snapshot; rerun it to see newer responses. Leave the generator running.
+
+For optional details such as container state, restart counts, and events, see [traffic-generator inspection in Appendix B](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#traffic-generator-pod).
 
 **Checkpoint:** the app returns your customized message, two app replicas are ready, and the generator is running. Find `web` and `istio-proxy` in the architecture diagram and explain each container's job. Would replacing a pod require a new Service IP? If HTTP or traffic is still failing, ask for help before continuing.
 
@@ -625,5 +649,15 @@ kubectl -n oke-lab get pods -l app=hello-oke \
 ```
 
 Expect `Always` for each application's `istio-proxy`. See [Kubernetes sidecar containers](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/). If these checks differ, ask the instructor; do not apply the legacy manifests or reinstall components merely to match the example.
+
+### Traffic generator pod
+
+To inspect the separate request generator, run:
+
+```bash
+kubectl -n oke-lab describe pods -l app=hello-oke-traffic
+```
+
+Find the `traffic` container and its `istio-proxy`, check their state and restart counts, then read **Events** for warnings. The generator calls `http://hello-oke:80/` inside the cluster; it does not use the public `APP_IP`. Its logs print the application's responses. For request errors, compare those logs with the readiness of the application pods.
 
 For instructors: [delivery notes, preparation, and release checklist](docs/instructor-guide.md).

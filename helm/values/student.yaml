@@ -1,4 +1,4 @@
-# Edit the message, then render and deploy this file during the Build exercise.
+# Edit only message; Helm applies these values in the Configure and deploy exercise.
 message: Hello from my OKE bootcamp
 replicaCount: 2
 resources:
