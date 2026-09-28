@@ -39,15 +39,9 @@ These times are estimates from the start of hands-on work, after the 30-minute l
 
 ## Before hands-on: start preparation at the beginning of the lecture
 
-Start this section as soon as the lecture begins—do **not** wait for the cluster to be ready. Cluster provisioning can take much of the lecture, so complete the desktop, repository, and OCI Console steps while it runs. You can create the kubeconfig and run the readiness checks only after the assigned cluster is available.
+Start the lab at the beginning of the lecture. This starts cluster provisioning, which can take some time. Continue when the instructor confirms that your assigned cluster is ready.
 
-Open your assigned Luna session as directed by the instructor. The Luna desktop may appear before the cluster is ready; this is expected.
-
-If provisioning is still running, continue with the steps below that do not require a cluster. If it has failed or a required preparation check is blocked, ask the instructor. Do not create or select a replacement cluster.
-
-Right-click an empty area of the Luna desktop and open a terminal. Use Bash and keep this window as **terminal 1**.
-
-In **terminal 1** on your Luna desktop, download the lab repository:
+In a **Bash terminal** on your Luna desktop, download the lab repository:
 
 ```bash
 git clone --branch lab-2026-09-25.1 --single-branch \
