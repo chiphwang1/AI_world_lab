@@ -37,11 +37,13 @@ Step 6, pod recovery, is optional: do it only if step 5 is complete by minute 50
 
 These times are estimates from the start of hands-on work, after the 30-minute lecture and the preparation below. They include reading, editing, commands, waits, and interpretation. Downloads and cloud readiness vary; ask for help when a checkpoint is blocked. Console sign-in, repository download, kubeconfig creation, and preparation checks must be complete before the 60-minute clock starts.
 
-## Before hands-on: prepare during the lecture
+## Before hands-on: start preparation at the beginning of the lecture
 
-Complete this section during the lecture, using your cluster once it is ready. If any preparation check is blocked, ask the instructor before starting step 1. Keep terminal 1 open when you finish; later commands use its connection settings and chart-version variables.
+Start this section as soon as the lecture begins—do **not** wait for the cluster to be ready. Cluster provisioning can take much of the lecture, so complete the desktop, repository, and OCI Console steps while it runs. You can create the kubeconfig and run the readiness checks only after the assigned cluster is available.
 
-Open your assigned Luna session as directed by the instructor. The desktop can appear before the cluster is ready. If provisioning is still running or has failed, ask the instructor; do not create a replacement cluster.
+Open your assigned Luna session as directed by the instructor. The Luna desktop may appear before the cluster is ready; this is expected.
+
+If provisioning is still running, continue with the steps below that do not require a cluster. If it has failed or a required preparation check is blocked, ask the instructor. Do not create or select a replacement cluster.
 
 Right-click an empty area of the Luna desktop and open a terminal. Use Bash and keep this window as **terminal 1**.
 
