@@ -58,7 +58,7 @@ class LabMaterials(unittest.TestCase):
 
     def test_connection_setup_starts_the_timed_exercises(self):
         readme = (ROOT / "README.md").read_text()
-        preparation, exercises = readme.split("## 1. Prepare and confirm your connection — 5 minutes", 1)
+        preparation, exercises = readme.split("## 1. Prepare and confirm your connection — 10 minutes", 1)
         self.assertIn("## Before hands-on: start preparation at the beginning of the lecture", preparation)
         self.assertNotIn("git clone --branch", preparation)
         for command in ("git clone --branch", "oci ce cluster create-kubeconfig",
@@ -68,7 +68,7 @@ class LabMaterials(unittest.TestCase):
             with self.subTest(command=command):
                 self.assertIn(command, exercises)
         access = (ROOT / "docs/cluster-access.md").read_text()
-        self.assertIn("../README.md#1-prepare-and-confirm-your-connection--5-minutes", access)
+        self.assertIn("../README.md#1-prepare-and-confirm-your-connection--10-minutes", access)
         for name in ("docs/instructor-guide.md", "helm/README.md"):
             with self.subTest(file=name):
                 text = (ROOT / name).read_text()
@@ -127,13 +127,94 @@ class LabMaterials(unittest.TestCase):
         self.assertIn("lab-specific settings", readme)
         self.assertIn("custom training materials", readme)
 
+    def test_concepts_connect_counts_desired_state_and_observations(self):
+        readme = (ROOT / "README.md").read_text()
+        introduction = readme.split("## Schedule", 1)[0]
+        for concept in ("worker nodes", "ReplicaSet", "Kubernetes control plane",
+                        "manage application traffic through proxies"):
+            with self.subTest(concept=concept):
+                self.assertIn(concept, introduction)
+        self.assertNotIn("`istiod`", introduction)
+        istio_install = readme.split("### Install Istio", 1)[1].split("### Install Prometheus", 1)[0]
+        self.assertIn("`istiod`, which configures the proxies", istio_install)
+        for explanation in ("Deployment `READY 2/2`", "Each pod's `READY 2/2`",
+                            "**desired state**", "`NODE` column",
+                            "current average utilization / target utilization",
+                            "evidence of increased demand", "evidence of Kubernetes' response"):
+            with self.subTest(explanation=explanation):
+                self.assertIn(explanation, readme)
+        self.assertIn("generator bypass", readme)
+        self.assertIn("Trace the monitoring path", readme)
+        self.assertIn("Trace the CPU-based autoscaling path", readme)
+        sheet = (ROOT / "docs/completion-sheet.md").read_text()
+        for question in (2, 3):
+            self.assertIn(f"My evidence (question {question}):", sheet)
+        self.assertNotIn("assigned context", sheet)
+
     def test_hpa_inspection_follows_creation(self):
         readme = (ROOT / "README.md").read_text()
-        before_scaling, scaling = readme.split("## 5.", 1)
+        before_scaling, scaling = readme.split("## 6. Optional: CPU-based autoscaling", 1)
         self.assertNotRegex(before_scaling, r"kubectl[^\n`]*\b(?:get|describe) hpa\b")
-        self.assertIn("Not enabled", before_scaling.split("## 4.", 1)[1])
+        self.assertNotIn("--set autoscaling.enabled=true", before_scaling)
+        self.assertNotIn("--set traffic.loadEnabled=true", before_scaling)
+        self.assertIn("HPA remains disabled throughout the core lab", before_scaling)
         self.assertLess(scaling.index("--set autoscaling.enabled=true"),
                         scaling.index("kubectl -n oke-lab get hpa hello-oke"))
+
+    def test_optional_extensions_do_not_gate_core_completion(self):
+        readme = (ROOT / "README.md").read_text()
+        core_goals = readme.split("By the end, you should be able to:", 1)[1].split("If time permits", 1)[0]
+        self.assertNotIn("load metrics", core_goals)
+        self.assertNotIn("autoscaling", core_goals)
+        self.assertIn("manual scaling", core_goals)
+        manual = readme.split("## 5. Scale manually", 1)[1].split("## 6.", 1)[0]
+        for detail in ("--set replicaCount=4", "--set replicaCount=2",
+                       "**Core checkpoint:**", "Go to **step 8**"):
+            self.assertIn(detail, manual)
+        for detail in ("Neither extension is required", "at least 15 minutes",
+                       "by lab minute 40", "by lab minute 50",
+                       "**Only if you attempted the HPA extension:**"):
+            self.assertIn(detail, readme)
+        hpa = readme.split("## 6.", 1)[1].split("## 7.", 1)[0]
+        self.assertIn("--set traffic.loadEnabled=false", hpa)
+        self.assertIn("If time runs short, reset the load", hpa)
+        recovery = readme.split("## 7.", 1)[1].split("## 8.", 1)[0]
+        self.assertIn("does not require HPA", recovery)
+        sheet = (ROOT / "docs/completion-sheet.md").read_text()
+        core = sheet.split("## Optional HPA observations", 1)[0]
+        self.assertEqual(core.count("- [ ]"), 4)
+        self.assertNotIn("kubectl -n oke-lab get hpa", core)
+        self.assertNotIn("traffic.loadEnabled", core)
+        self.assertIn("Manual (4 replicas)", core)
+        self.assertIn("Restored (2 replicas)", core)
+        self.assertIn("Skipped extensions do not affect this result", sheet)
+        self.assertIn("even if the extension was interrupted", sheet)
+        instructor = (ROOT / "docs/instructor-guide.md").read_text()
+        self.assertIn("No HPA resource, load burst, or automatic scale-in is required", instructor)
+        self.assertIn("HPA disabled throughout", instructor)
+
+    def test_beginner_explanations_precede_use_and_alternatives_are_separate(self):
+        readme = (ROOT / "README.md").read_text()
+        core = readme.split("## Appendix A:", 1)[0]
+        self.assertNotIn("https://cloud.oracle.com/containers/clusters/", core)
+        self.assertLess(core.index("Your **kubeconfig**"),
+                        core.index("oci ce cluster create-kubeconfig"))
+        self.assertLess(core.index("Horizontal Pod Autoscaler (HPA)"),
+                        core.index("## 1."))
+        self.assertIn("ready to observe the application when it starts", core)
+        self.assertLess(core.index("called **scraping**"), core.index("Istiod scrape health"))
+        self.assertIn("`/work` endpoint performs CPU-intensive calculations", core)
+        self.assertIn("Heavier requests do not necessarily mean more requests per second", core)
+
+    def test_provisional_core_schedule_reserves_debrief(self):
+        readme = (ROOT / "README.md").read_text()
+        schedule = readme.split("## Schedule", 1)[1].split("## Before hands-on", 1)[0]
+        intervals = [(int(start), int(end)) for start, end in
+                     re.findall(r"^\| (\d+)–(\d+) \|", schedule, re.M)]
+        self.assertEqual(intervals, [(0, 10), (10, 28), (28, 40),
+                                     (40, 48), (48, 55), (55, 60)])
+        self.assertIn("provisional", schedule)
+        self.assertIn("beginner pilot", schedule)
 
     def test_dashboard_guidance_explains_results(self):
         readme = (ROOT / "README.md").read_text()

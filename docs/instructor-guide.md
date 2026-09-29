@@ -23,26 +23,26 @@ Render and visually inspect both pages before publishing. The builder rejects un
 | Workshop minute | Activity or readiness gate |
 |---|---|
 | 0–5 | Have students start Luna to begin automatic cluster provisioning. Introduce the app and learning goals. |
-| 5–15 | Trace requests, dashboard telemetry, and HPA CPU metrics on the shared diagram. |
+| 5–15 | Trace requests and dashboard telemetry on the shared diagram. Identify HPA as an optional extension. |
 | 15–20 | Explain Deployment → Pods → Service, chart versus release, and readiness versus liveness. |
 | 20 | A helper checks provisioning status and identifies sessions needing intervention. Continue the lecture. |
-| 20–30 | Explain CPU requests/limits and HPA; demonstrate repository root, kubeconfig, and the three-terminal layout. |
-| 30–35 / lab 0–5 | Begin hands-on step 1: clone, sign in, create kubeconfig, run preflight, and download/check charts. |
-| 53 / lab 23 | Mesh and monitoring installed. Intervene on blocked installations. |
-| 63 / lab 33 | Public app and baseline traffic working. Intervene before dashboard exploration. |
-| 77 / lab 47 | Start the five-minute burst by this point to leave time for scale-in. |
+| 20–30 | Explain desired state and manual scaling; demonstrate repository root, kubeconfig, and the three-terminal layout. |
+| 30–40 / lab 0–10 | Begin hands-on step 1: clone, sign in, create kubeconfig, run preflight, and download/check charts. |
+| 58 / lab 28 | Mesh and monitoring installed. Intervene on blocked installations. |
+| 70 / lab 40 | Public app and baseline traffic working. Intervene before dashboard exploration. |
+| 78 / lab 48 | Baseline dashboard observations recorded; begin manual scaling. |
 | 85 / lab 55 | Core work ends; record any blocked checkpoint honestly. |
 | 85–90 | Debrief using the completion sheet; absorb small delays. |
 
-Only offer pod recovery if core work finishes by lab minute 50. Direct Prometheus queries, outages, and OCI alarms are extensions outside this session.
+HPA and pod recovery are optional and do not affect core completion. Offer HPA only after the core is complete and at least 15 minutes remain before debrief (by lab minute 40); offer recovery with five minutes remaining (by minute 50). These are early-finisher options, not additional targets for the scheduled core. Otherwise offer a follow-up session with an authorized lab environment. Do not promise that an expired Luna session remains available. Direct Prometheus queries, outages, and OCI alarms are outside this session.
 
 ## Before class and the minute-20 check
 
-Prepare desktop tools and verify repository and chart-repository access before the workshop. Students start Luna at workshop minute 0 and do no further setup during the lecture. Students download the charts in hands-on step 1, when they also generate their kubeconfig and check readiness. See [cluster access](cluster-access.md). The five-minute step 1 target includes downloads and still needs a beginner pilot.
+Prepare desktop tools and verify repository and chart-repository access before the workshop. Students start Luna at workshop minute 0 and do no further setup during the lecture. Students download the charts in hands-on step 1, when they also generate their kubeconfig and check readiness. See [cluster access](cluster-access.md). The revised ten-minute setup target includes downloads; it and the rest of the schedule still need a beginner pilot.
 
 ### One materials revision
 
-Publish the immutable, annotated tag `lab-2026-09-28.5` in both GitLab (Luna's source) and the private GitHub distribution repository before distributing these instructions. Both tags must identify the same commit containing these updated instructions and pass the remote checks below. A revision printed in the README does not create a release tag; the student's clone command will fail until that tag is published. This is a versioned materials release; the classroom pilot and other release gates below remain required. Keep Luna's published GitLab branch at this revision during a workshop, and make later edits on a separate branch. Do not move an existing release tag.
+Publish the immutable, annotated tag `lab-2026-09-29.1` in both GitLab (Luna's source) and the private GitHub distribution repository before distributing these instructions. Both tags must identify the same commit containing these updated instructions and pass the remote checks below. A revision printed in the README does not create a release tag; the student's clone command will fail until that tag is published. This is a versioned materials release; the classroom pilot and other release gates below remain required. Keep Luna's published GitLab branch at this revision during a workshop, and make later edits on a separate branch. Do not move an existing release tag.
 
 Students download a **new** checkout with the pinned clone command at the start of hands-on step 1. After cloning, verify the revision in their checkout:
 
@@ -51,16 +51,16 @@ cd "$HOME/oke-bootcamp"
 git describe --tags --exact-match HEAD
 ```
 
-Expect `lab-2026-09-28.5`. Students skip cloning if that folder exists. Inspect its revision and edits; do not reset, pull over, or delete a learner's work. If it is the wrong revision, prepare a separate directory and supply that path. The repository is private: resolve learner access beforehand, avoid credentials in clone URLs, and do not leave an instructor's Git credentials on a shared desktop. An instructor-distributed checkout must retain Git metadata and the release tag for this revision check.
+Expect `lab-2026-09-29.1`. Students skip cloning if that folder exists. Inspect its revision and edits; do not reset, pull over, or delete a learner's work. If it is the wrong revision, prepare a separate directory and supply that path. The repository is private: resolve learner access beforehand, avoid credentials in clone URLs, and do not leave an instructor's Git credentials on a shared desktop. An instructor-distributed checkout must retain Git metadata and the release tag for this revision check.
 
 Before publishing or teaching, compare these remote outputs. Both `refs/heads/main` values and both peeled tag values (`^{}`) must match the selected release commit. Stop on a missing or different value; a successful GitLab push alone does not synchronize GitHub.
 
 ```bash
-git ls-remote origin refs/heads/main 'refs/tags/lab-2026-09-28.5^{}'
-git ls-remote github refs/heads/main 'refs/tags/lab-2026-09-28.5^{}'
+git ls-remote origin refs/heads/main 'refs/tags/lab-2026-09-29.1^{}'
+git ls-remote github refs/heads/main 'refs/tags/lab-2026-09-29.1^{}'
 ```
 
-These remote names apply to the maintainer checkout. Verify Luna displays `Materials revision: lab-2026-09-28.5` and that its PDF/PNG links work. Record the resolved commit on the pilot timing sheet. Do not treat the tag itself as evidence that classroom testing passed.
+These remote names apply to the maintainer checkout. Verify Luna displays `Materials revision: lab-2026-09-29.1` and that its PDF/PNG links work. Record the resolved commit on the pilot timing sheet. Do not treat the tag itself as evidence that classroom testing passed.
 
 A local commit or tag does not update either remote. When publication is approved, review both remotes for newer work, then push the same reviewed commit and annotated tag to both without force. Use an atomic push per remote so its branch and tag update together. If either push fails, stop distribution until both pass the checks above; atomic pushes do not span two repositories.
 
@@ -92,7 +92,7 @@ At workshop minute 20:
 
 During hands-on step 1, students run `bash scripts/check-ready.sh` using their kubeconfig's current context, then download and check the charts. Help with reported failures before they proceed to installation. Preflight does **not** prove Helm install permissions, all scheduling constraints, or future LoadBalancer availability; validate the lab configuration, managed add-ons, and image access during rehearsal.
 
-Protect the observation and debrief blocks. Use installation waits for the architecture discussion, the manual-scaling wait for readiness and liveness, and the five-minute load burst for the metrics-source explanation. No extra deployment or deliberate failure is needed for the probe discussion. If setup runs late, send a helper to resolve it; do not replace the learner's interpretation time with more setup commands or silently mark missing observations complete. Keep the last five minutes for debrief and skip optional recovery when behind.
+Protect the observation and debrief blocks. Use installation waits for the architecture discussion and the manual-scaling wait for readiness and liveness. No extra deployment or deliberate failure is needed for the probe discussion. If setup runs late, send a helper to resolve it; do not replace interpretation time with more commands or silently mark missing observations complete. Keep the last five minutes for debrief and skip both extensions when behind. If an HPA attempt runs short, have the learner reset `traffic.loadEnabled=false` before recording it as blocked; stopping a watch does not stop the burst.
 
 In step 3, have students reach their customized HTTP response before opening detailed pod descriptions. Use the diagram to identify `web` and `istio-proxy`; Appendix B contains optional JSONPath, native-sidecar, and restart-policy checks. Use that appendix for troubleshooting or follow-up study, not as another required checkpoint.
 
@@ -104,22 +104,27 @@ Keep two workers for this tested per-learner workload. Validate allocatable capa
 
 Use the [completion sheet](completion-sheet.md) to assess both observations and explanations. At each prediction, wait about 30 seconds before giving the explanation: students state or write a prediction, inspect the existing output, then explain the result to a partner or instructor. Ask "Which value supports that?" before correcting an answer. These pauses are included in the exercise estimates; use the install/load waits and checkpoint time rather than adding another quiz. Do not require a peak of six replicas or invent readings for missing panels.
 
-At the dashboard checkpoint, ask learners to show the Kiali traffic edge and explain one Grafana reading, then name their shared data source. The baseline HPA field is `Not enabled`; do not ask students to inspect it before step 5 creates it. During the burst, have partners compare baseline and load request rate, p95 latency, and replica count, using their readings to explain one change. Also compare an HPA CPU reading with dashboard data to distinguish the two metrics paths. At scale-in, check the HPA count and two Ready app pods before accepting completion; discuss any lag in Grafana's proxy count. Students can finish questions 2–4 during this wait.
+At the dashboard checkpoint, ask learners to show the Kiali traffic edge and explain one Grafana reading, then name Prometheus as their shared data source. The core observation table follows manual 2→4→2 scaling; HPA remains disabled. Use Ready pod counts as evidence and discuss why proxy count can lag. More replicas do not generate more requests: baseline traffic keeps its two-second interval, although the learner's curl requests briefly add traffic. Do not require a particular latency improvement from this low-load exercise.
 
-Listen for a reason, not only a correct tool name. For example, a learner should connect HPA CPU input to Metrics Server and identify a request-rate or latency reading supplied by Prometheus. For the Running/Ready question, let the learner distinguish traffic eligibility from restart behavior before confirming that a Running pod can be unready with zero restarts. Reveal the answer guide after the learner has attempted the explanation.
+Listen for a reason, not only a correct tool name. For example, a learner should identify a request-rate or latency reading supplied by Prometheus and use pod output to explain the changed replica count. For the Running/Ready question, let the learner distinguish traffic eligibility from restart behavior before confirming that a Running pod can be unready with zero restarts. Reveal the answer guide after the learner has attempted the explanation.
+
+Use the diagram progressively: trace browser and generator requests in step 3 and monitoring in step 4. Before the first deployment, distinguish worker count, Deployment ready replicas, and ready containers within each pod. During manual scaling, have students use the `NODE` column to locate their app pods and explain desired state. Complete the core evidence fields and questions 1–4 during the existing waits and debrief. Measure the revised schedule in the beginner pilot; moving HPA out of the core does not prove the hour is achievable.
+
+Only for the optional HPA extension, trace the CPU-based autoscaling panel and explain requests/limits before enabling HPA in step 6. Use the `/work` calculations to connect app CPU demand to replica growth. Compare baseline and load readings without promising a higher request rate or lower latency. Check numeric HPA metrics before load, scale-out above two, return to two Ready app pods, and an explicit load reset. Record extension results separately; a skipped or blocked extension does not erase completed core work.
 
 | Prompt | What a successful explanation includes |
 |---|---|
 | Stable endpoint | The Service survives pod replacement; its OCI LoadBalancer address remains unchanged during pod scaling. |
-| Two metrics paths | Metrics Server supplies this HPA's resource metrics. Prometheus supplies Kiali and Grafana with mesh telemetry. |
-| Dashboard interpretation | Request rate counts requests per second; success rate counts the percentage with HTTP 2xx/3xx responses. p95 estimates the response time within which about 95% of requests finish. Baseline `/` and load `/work` do different work, so their latency comparison does not isolate autoscaling's effect. |
-| Scaling | Manual scaling and HPA change app replicas; neither changes worker count in this lab. HPA owns the count once enabled. |
-| Scale-in evidence | HPA returns to two and two app pods are Ready after CPU falls. Scrape discovery can make Grafana's proxy count lag; it is not a readiness measurement. |
+| Dashboard source | Prometheus supplies Kiali and Grafana with mesh telemetry. |
+| Dashboard interpretation | Request rate counts requests per second; success rate counts the percentage with HTTP 2xx/3xx responses. p95 estimates the response time within which about 95% of requests finish. More replicas do not create more demand, and proxy count can lag actual Ready pods. |
+| Manual scaling | Helm changes the desired app count 2→4→2; Kubernetes maintains it. Worker count and Service IP stay unchanged. |
 | Probes and Degraded | Readiness excludes an unready pod from normal Service traffic; liveness can restart a failing container. Kiali's label alone does not identify a probe failure: inspect the affected object, pod state, events, and request errors. |
-| CPU prediction | 60% of a `200m` request is `120m`. Utilization is relative to the request, not the CPU limit; the HPA here measures `web`, not the sidecar. |
+| Optional HPA metrics and scale-in | Metrics Server supplies CPU metrics; Prometheus supplies dashboards. HPA chooses the desired count. Completed scale-in has two HPA replicas and two Ready app pods after CPU falls; proxy count can lag. |
+| Optional HPA load comparison | `/work` adds CPU work. Its latency comparison with `/` cannot isolate autoscaling's effect because the workload changes too. |
+| Optional CPU prediction | 60% of a `200m` request is `120m`. Utilization is relative to the request, not the CPU limit; the HPA here measures `web`, not the sidecar. |
 | Optional recovery | The Deployment's ReplicaSet replaces a deleted pod at the same desired count. This is self-healing, not an HPA scale-out. |
 
-Completion requires the customized public response, mesh traffic, baseline/load/scale-in observations, replica growth above two and return to two, and explicit `traffic.loadEnabled=false`. A missing metric or blocked checkpoint needs instructor follow-up, not a checked box. A partner discussion can assess the explanations without another quiz.
+Core completion requires the customized public response, mesh traffic, baseline dashboard readings, manual 2→4→2 scaling observations with unchanged workers and Service IP, and the core debrief. No HPA resource, load burst, or automatic scale-in is required. Missing core evidence needs follow-up, not a checked box. Record HPA and recovery separately as skipped, completed, or blocked; any attempted burst must still be reset. A partner discussion can assess explanations without another quiz.
 
 ## Classroom pilot and release gates
 
@@ -131,7 +136,8 @@ Run the pilot in a separately authorized, disposable Luna session. Do not reset 
 - [ ] Have a Kubernetes beginner follow the README, including chart downloads after cloning. Record prompts for help, navigation errors, step 1 setup time, and each checkpoint time. Confirm the learner can explain Deployment, Pod, and Service roles and interpret one dashboard change; copying output alone does not demonstrate understanding.
 - [ ] Inventory already-installed add-ons/releases and cached charts/images. Measure clean student installs; label any warm reuse. Do not compare a cached upgrade directly with a fresh install.
 - [ ] Record command execution/waits separately from reading, editing, typing, and interpreting results. Actual learner delays are measured human time; simulated allowances must be labeled as estimates. Account for overlap once, not twice.
-- [ ] Verify both dashboard UIs, manual 2→4→2 scaling, numeric HPA metrics, the bounded burst, scale-out, explicit load reset, and scale-in. Finish core work by lab minute 55 and the debrief by workshop minute 90.
+- [ ] Verify both dashboard UIs and manual 2→4→2 scaling with HPA disabled throughout. Finish core work by lab minute 55 and debrief by workshop minute 90. Confirm a student who skips both extensions can complete every core requirement.
+- [ ] Separately rehearse optional HPA: numeric CPU metrics, the bounded burst, scale-out, explicit load reset, and scale-in. Measure its duration and test an interrupted attempt's reset. This remains a maintainer release check, not a core student requirement. Verify pod recovery also works without HPA.
 - [ ] Run a separate 60-minute dashboard soak before release, since dashboards open partway through the classroom lab. Refresh the lab dashboard every 15 seconds; sample Grafana pod UID, restart count, memory, and events before, during, and after. Require no OOM kills or unexplained restarts and investigate failed queries or broken forwards. Grafana currently requests 512Mi and is limited to 1Gi, with `GOMEMLIMIT=512MiB`.
 - [ ] In the authorized pilot, leave releases installed and let Luna's session-end cleanup run. Monitor it through completion and verify the app's OCI LoadBalancer is removed before infrastructure destruction. Confirm no billable leftovers; students must not run a manual uninstall. Follow [cleanup responsibilities](cleanup.md).
 - [ ] Test the expected number of simultaneous learner sessions for OCI quotas, launch time, image/chart access, scheduling, and cleanup. One healthy cluster does not validate classroom capacity.
@@ -146,10 +152,11 @@ Pilot timing record:
 | Install components | ___ | ___ | ___ | ___ | ___ | ___ |
 | Configure/deploy | ___ | ___ | ___ | ___ | ___ | ___ |
 | Observe | ___ | ___ | ___ | ___ | ___ | ___ |
-| Scale-out/in | ___ | ___ | ___ | ___ | ___ | ___ |
+| Manual scaling 2→4→2 | ___ | ___ | ___ | ___ | ___ | ___ |
 | Debrief | ___ | ___ | ___ | ___ | ___ | ___ |
+| Optional HPA (separate timing) | ___ | ___ | ___ | ___ | ___ | ___ |
 
-Count all step 1 setup within the hands-on hour, including chart downloads and any access troubleshooting. Only provisioning overlaps the lecture. The earlier model was approximately 50–51 minutes with prepared caches and simulated human allowances, or 56–61 with simulated cold-download allowances before troubleshooting. These are not measurements of this revised learner document. Retest the five-minute setup target rather than claiming that a shorter README proves a faster class.
+Count all step 1 setup within the hands-on hour, including chart downloads and any access troubleshooting. Only provisioning overlaps the lecture. The earlier model included required HPA and was approximately 50–51 minutes with prepared caches and simulated human allowances, or 56–61 with simulated cold-download allowances before troubleshooting. These are not measurements of the revised core. Test the ten-minute setup allowance and protected observation/debrief time with a beginner before claiming that the new schedule fits.
 
 ## Maintenance and distribution
 
@@ -157,13 +164,13 @@ The [September 18 rehearsal](rehearsal-2026-09-18.md), [September 21 reset/reins
 
 The preflight compatibility check follows the pinned Istio 1.31.x range, Kubernetes 1.32–1.36, and kubectl's one-minor-version skew rule. Review the script and its tests whenever changing these pins. Sources: [Istio supported releases](https://istio.io/latest/docs/releases/supported-releases/) and [kubectl version skew policy](https://kubernetes.io/releases/version-skew-policy/#kubectl).
 
-The private GitHub mirror and GitLab source must publish the same immutable materials tag, `lab-2026-09-28.5`, and matching main-branch commit for Luna. Publish both explicitly, without force-pushing, and verify the remote hashes as described above. Use GitLab's `ci.skip` push option for documentation/materials publication so it does not launch infrastructure jobs; required security scans remain a separate release gate. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
+The private GitHub mirror and GitLab source must publish the same immutable materials tag, `lab-2026-09-29.1`, and matching main-branch commit for Luna. Publish both explicitly, without force-pushing, and verify the remote hashes as described above. Use GitLab's `ci.skip` push option for documentation/materials publication so it does not launch infrastructure jobs; required security scans remain a separate release gate. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
 
 `terraform/` and CI scripts are instructor-managed; `charts/` and `helm/` contain learner deployment materials. Do not mix the legacy `kubernetes/` manifests into the Helm student workflow. See [CI administration](gitlab-ci.md), [local Terraform workflow](maintainer-infrastructure.md), and [cleanup](cleanup.md).
 
 ## Suggested Luna description
 
-Deploy, monitor, and scale an application on a Luna-provisioned Oracle Kubernetes Engine (OKE) cluster. Use Helm, a package manager for Kubernetes, to install and configure your application and monitoring tools. Istio manages application traffic and reports request metrics; Prometheus collects and stores those metrics; Kiali maps service traffic and health; and Grafana charts metrics over time. Generate traffic, compare request rates and latency, and observe manual scaling and CPU-based autoscaling. Optionally, replace one application pod and watch Kubernetes restore the replica count.
+Deploy, monitor, and manually scale an application on a Luna-provisioned Oracle Kubernetes Engine (OKE) cluster. Use Helm, a package manager for Kubernetes, to install and configure your application and monitoring tools. Istio manages application traffic and reports request metrics; Prometheus collects and stores those metrics; Kiali maps service traffic and health; and Grafana charts metrics over time. Observe baseline traffic and change application replicas from two to four and back. CPU-based autoscaling and pod recovery are optional extensions for early finishers or a follow-up session.
 
 ### What you will build
 
@@ -172,16 +179,17 @@ Deploy, monitor, and scale an application on a Luna-provisioned Oracle Kubernete
 - **Prometheus metrics store:** Collects and stores request metrics from Istio for Kiali and Grafana to query.
 - **Kiali traffic graph:** Maps communication between services and shows request rates, errors, latency, and workload health.
 - **Grafana dashboard:** Plots metrics over time so you can compare baseline traffic, load, and scaling.
-- **Traffic and autoscaling:** A traffic generator and Horizontal Pod Autoscaler (HPA) to demonstrate how application replicas respond to CPU demand.
+- **Baseline traffic and manual scaling:** A traffic generator to make requests while you change replica counts.
+- **Optional autoscaling:** A Horizontal Pod Autoscaler (HPA) to respond to CPU demand during a bounded load test.
 
 ### What you will learn
 
 - Customize and deploy an application with Helm.
 - Explain how Kubernetes Services keep an application reachable as pods change.
-- Explore service traffic in Kiali and compare baseline and load metrics in Grafana.
-- Scale replicas manually and observe CPU-based HPA scale-out and scale-in.
+- Explore service traffic in Kiali and compare Grafana readings during manual scaling.
+- Scale replicas manually without changing worker count or Service IP.
 - Distinguish readiness from liveness and investigate health warnings.
-- Optionally, replace one application pod and observe Kubernetes restore the desired replica count.
+- Optionally, observe CPU-based autoscaling or replace one pod and watch Kubernetes restore the desired count.
 
 ### Before you begin
 
@@ -192,7 +200,7 @@ Have these ready before the hands-on portion:
 - A Bash terminal with OCI CLI, kubectl, Helm, Git, and curl installed; the instructor prepares these tools.
 - Basic familiarity with terminal commands and editing a YAML file.
 
-**Lab duration:** 60 minutes, including hands-on exercises and debrief. Complete the introductory lecture and cluster provisioning before the lab timer starts.
+**Lab duration:** 60 minutes for the core exercises and debrief. Complete the introductory lecture and cluster provisioning before the lab timer starts. Optional extensions need additional time or an early finish; they are not required for completion.
 
 In hands-on step 1, clone the repository, obtain your kubeconfig, run preflight, and download/check the chart archives.
 

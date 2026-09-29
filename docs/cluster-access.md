@@ -1,6 +1,6 @@
 # Access your OKE cluster
 
-Use this page for additional kubeconfig instructions or access troubleshooting during hands-on [step 1](../README.md#1-prepare-and-confirm-your-connection--5-minutes). Before hands-on, students only start the Luna lab so their cluster can provision during the lecture. Ask the instructor for help if access is blocked.
+Use this page for additional kubeconfig instructions or access troubleshooting during hands-on [step 1](../README.md#1-prepare-and-confirm-your-connection--10-minutes). Before hands-on, students only start the Luna lab so their cluster can provision during the lecture. Ask the instructor for help if access is blocked.
 
 ## Start with your Luna session
 

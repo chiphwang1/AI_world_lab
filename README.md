@@ -1,52 +1,60 @@
 # OKE Bootcamp: Build, Run, and Scale Kubernetes on OCI
 
-Luna provisions your Oracle Kubernetes Engine (OKE) cluster. Use Helm to deploy an application and install Istio, Prometheus, Kiali, and Grafana to observe its traffic and scaling.
+This lab introduces the process of deploying, monitoring, and scaling an application on Oracle Kubernetes Engine (OKE). You'll deploy an application with Helm, observe its traffic and performance with Istio, Prometheus, Kiali, and Grafana, and change the number of application replicas manually. These are commonly used tools and practices for managing applications on Kubernetes. Autoscaling and pod recovery are optional extensions.
 
-This **60-minute hands-on lab and debrief** follows a 30-minute lecture while the cluster provisions (**90 minutes total**). Compare traffic and latency, scale the app manually and automatically, and optionally test pod recovery. Luna handles cluster creation and cleanup.
+Luna provisions your cluster and handles session-end cleanup so you can focus on working with the application.
+
+This **60-minute hands-on lab and debrief** follows a 30-minute lecture while the cluster provisions (**90 minutes total**).
+
+Your cluster has two **worker nodes**, the machines that run pods. Each application **pod** contains the Python app and an Istio proxy. A **Deployment** declares how many app pods should run, and its ReplicaSet maintains that count. A **Service** gives clients a stable way to reach those pods as individual pods change.
+
+OKE manages the Kubernetes control plane that coordinates your cluster. You'll add Istio to this cluster to manage application traffic through proxies that run alongside your application containers.
 
 This lab assumes you can navigate a terminal, copy commands, and edit a YAML value. By the end, you should be able to:
 
 - Customize and deploy an application with Helm, then explain how its Service reaches its pods.
 - Identify the application container and its Istio proxy, and follow traffic in Kiali.
-- Compare baseline and load metrics using your Grafana readings.
-- Explain manual scaling, CPU-driven autoscaling, and why neither adds worker nodes in this lab.
+- Interpret baseline traffic and compare Grafana readings during manual scaling.
+- Scale app replicas manually and explain why this does not add worker nodes.
 - Distinguish readiness from liveness and use pod events to investigate a health warning.
+
+If time permits, use the **Horizontal Pod Autoscaler (HPA)** to adjust replicas from CPU measurements, or observe Kubernetes replacing a deleted pod. Neither extension is required to complete the lab.
 
 Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private.
 
-Materials revision: `lab-2026-09-28.5`. Your checkout and Luna instructions must show this same revision.
+Materials revision: `lab-2026-09-29.1`. Your checkout and Luna instructions must show this same revision.
 
 Record checkpoints in the [completion sheet (PDF)](docs/completion-sheet.pdf) or [Markdown version](docs/completion-sheet.md). You can save or print the PDF.
 
 ![OKE lab architecture: application requests through an OCI LoadBalancer, Prometheus feeding Kiali and Grafana, and Metrics Server supplying CPU metrics to the HPA.](docs/images/oke-lab-architecture.png)
 
-The diagram shows the setup after traffic and autoscaling are enabled, not live health. [View full-size](docs/images/oke-lab-architecture.png) or read the [component guide](docs/architecture.md).
+The diagram includes the optional HPA extension, not live health. Follow the requests and monitoring panels for the core lab; use the CPU-based autoscaling panel only for the extension. [View full-size](docs/images/oke-lab-architecture.png) or read the [component guide](docs/architecture.md).
 
 ## Schedule
 
 | Approximate hands-on minutes | Exercise | What you will demonstrate |
 |---|---|---|
-| 0–5 | 1. Prepare your connection | Download lab files, connect to your cluster, and verify resource metrics |
-| 5–23 | 2. Install mesh and monitoring | Install Istio, Prometheus, Kiali, and Grafana with Helm |
-| 23–33 | 3. Configure and deploy | Customize and deploy two replicas with an OCI LoadBalancer |
-| 33–40 | 4. Observe traffic | Interpret the Kiali graph and Grafana baseline |
-| 40–55 | 5. Scale | Scale manually, then observe CPU-driven scale-out and scale-in |
-| 55–60 | 7. Debrief and buffer | Explain your observations and absorb delays |
+| 0–10 | 1. Prepare your connection | Download lab files, connect to your cluster, and verify resource metrics |
+| 10–28 | 2. Install mesh and monitoring | Install Istio, Prometheus, Kiali, and Grafana with Helm |
+| 28–40 | 3. Configure and deploy | Customize and deploy two replicas with an OCI LoadBalancer |
+| 40–48 | 4. Observe traffic | Interpret the Kiali graph and Grafana baseline |
+| 48–55 | 5. Scale manually | Change app replicas from two to four and back to two |
+| 55–60 | 8. Debrief and buffer | Explain your observations and absorb delays |
 
-Step 6, pod recovery, is optional: do it only if step 5 is complete by minute 50. Save the last five minutes for debrief and delays. Direct Prometheus queries, controlled outages, and OCI alarms are extensions outside this hour.
+Steps 6 and 7 are optional. Allow at least 15 minutes for HPA setup, load, and scale-in, or five minutes for pod recovery, before the final debrief. During this hour, start HPA only if the core is complete by minute 40, or recovery by minute 50; otherwise save them for a follow-up session. Do not rush the core work to fit an extension. Direct Prometheus queries, controlled outages, and OCI alarms are outside this hour.
 
-Times include setup, reading, commands, waits, and interpretation. Downloads and cluster readiness vary; ask for help at blocked checkpoints.
+These are provisional planning targets, including setup, reading, commands, waits, and interpretation; a beginner pilot is still needed to validate them. Downloads and cluster readiness vary; ask for help at blocked checkpoints.
 
 ## Before hands-on: start preparation at the beginning of the lecture
 
 Start the Luna lab when the lecture begins so the cluster can provision during the lecture.
 
-## 1. Prepare and confirm your connection — 5 minutes
+## 1. Prepare and confirm your connection — 10 minutes
 
 In a **Bash terminal** on your Luna desktop, download the lab repository. Keep this window open as **terminal 1**:
 
 ```bash
-git clone --branch lab-2026-09-28.5 --single-branch \
+git clone --branch lab-2026-09-29.1 --single-branch \
   https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&
   cd "$HOME/oke-bootcamp"
 ```
@@ -67,21 +75,27 @@ If session details are missing, stop and ask the instructor; do not use a person
 
 Use the assigned compartment and region shown in Luna Lab.
 
+Your **kubeconfig** tells kubectl which cluster to connect to and how to authenticate. You'll create it on your Luna desktop, then select the file with `KUBECONFIG`. Follow the Console route below; the [access guide](docs/cluster-access.md) is for additional authentication details or troubleshooting.
+
 1. Select your **region** in the OCI Console. Open the upper-left navigation menu → **Developer Services → Containers & Artifacts → Kubernetes Clusters (OKE)**. See [Oracle's navigation instructions](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/list-clusters.htm).
 2. Open the **Compartment** filter. Expand the compartment hierarchy if needed and select the exact **Compartment Name** shown on your Luna Lab page. Do not choose a compartment just because its name begins with `luna`, and do not use the tenancy root.
 3. Open the cluster Luna created for you. If it is still provisioning, wait until it is ready.
+4. On your cluster's details page, open **Actions → Access cluster → Local Access**. “Local” means the terminal on your Luna desktop, not your personal laptop.
+5. In **terminal 1**, prepare the kubeconfig directory:
 
-   **Example page only—not a shared student cluster:** [Phoenix cluster details](https://cloud.oracle.com/containers/clusters/ocid1.cluster.oc1.phx.aaaaaaaa5mwgyqarbllvk7xavr2qkvipop7ihd6i4i5vejaoxctcyaybtyaq?region=us-phoenix-1). Use your own cluster's OCID and region.
-
-   To construct the details URL manually, replace both placeholders:
-
-   ```text
-   https://cloud.oracle.com/containers/clusters/<your-cluster-ocid>?region=<your-region>
+   ```bash
+   umask 077
+   mkdir -p "$HOME/.kube"
    ```
 
-4. On your cluster's details page, open **Actions → Access cluster → Local Access**. “Local” means the terminal on your Luna desktop, not your personal laptop.
-5. In **terminal 1**, run `umask 077` and `mkdir -p "$HOME/.kube"`.
-6. Copy and **run** the displayed `oci ce cluster create-kubeconfig` command in terminal 1 to create your kubeconfig. Change `--file` to `"$HOME/.kube/oke-lab"`; keep **your cluster's** OCID, region, and endpoint. Use the [desktop OCI authentication settings](docs/cluster-access.md#generate-your-kubeconfig-on-the-desktop). Do not add `--overwrite`.
+6. Copy the displayed `oci ce cluster create-kubeconfig` command from **Access cluster → Local Access**. Before running it:
+
+   - Change `--file` to `"$HOME/.kube/oke-lab"`.
+   - Keep **your cluster's** OCID, region, and endpoint.
+   - Follow the [desktop OCI authentication settings](docs/cluster-access.md#generate-your-kubeconfig-on-the-desktop).
+   - Do not add `--overwrite`.
+
+   Run the edited command in **terminal 1** to create your kubeconfig.
 
 ### Verify your kubeconfig
 
@@ -145,7 +159,7 @@ Expect a path ending in `oke-bootcamp`, your cluster's context, two `Ready` work
 
 ### What the tools do
 
-The tools in this lab are commonly used to deploy, manage, and monitor applications running on Kubernetes clusters.
+We install Istio and the monitoring tools first so they are ready to observe the application when it starts. This is the toolset chosen for this lab; Kubernetes applications can use other monitoring setups.
 
 | Tool or component | Purpose in this lab | Setup |
 |---|---|---|
@@ -156,7 +170,7 @@ The tools in this lab are commonly used to deploy, manage, and monitor applicati
 | Grafana | Charts metrics to compare baseline traffic, load, and scaling. | You install it below |
 | Metrics Server | Supplies CPU and memory readings to `kubectl top` and CPU metrics to this lab's HPA. | Provided with the cluster |
 | Cert Manager | Manages TLS certificates; it is a dependency of this OCI-managed Metrics Server add-on. | Provided with the cluster |
-| HPA | Adjusts app replicas using CPU metrics; it does not add worker nodes. | You enable it in step 5 |
+| HPA | Adjusts app replicas using CPU metrics; it does not add worker nodes. | Optional: enable in step 6 |
 
 `kubectl` manages Kubernetes resources; OCI CLI authenticates the connection. Both are preinstalled. The [architecture diagram](docs/architecture.md) separates dashboard and HPA metrics paths.
 
@@ -172,7 +186,7 @@ A **Helm chart** packages Kubernetes templates; a **release** is its named insta
 
 **For every Helm install or upgrade:** expect `STATUS: deployed` and a returned prompt. Ask for help on errors or timeouts before continuing.
 
-Install Istio base for its custom resource definitions (CRDs, extra Kubernetes object types), then `istiod`, the control plane. While waiting, trace the metrics path on the [architecture diagram](docs/architecture.md).
+Install Istio base for its custom resource definitions (CRDs, extra Kubernetes object types), then `istiod`, which configures the proxies that run alongside your application containers. While waiting, trace the metrics path on the [architecture diagram](docs/architecture.md).
 
 ```bash
 helm upgrade --install istio-base ".lab-cache/charts/base-${ISTIO_VERSION}.tgz" \
@@ -191,7 +205,7 @@ Expect `deployment "istiod" successfully rolled out` and confirmation that `oke-
 
 ### Install Prometheus
 
-Prometheus stores metrics temporarily; replacing its pod loses metric history.
+Prometheus periodically reads metrics from components; this collection is called **scraping**. It stores metrics temporarily; replacing its pod loses metric history.
 
 ```bash
 helm upgrade --install prometheus ".lab-cache/charts/prometheus-${PROMETHEUS_CHART_VERSION}.tgz" \
@@ -231,9 +245,9 @@ Kiali and Grafana allow anonymous, read-only access. **Never expose them with a 
 
 **Checkpoint:** all five releases (`istio-base`, `istiod`, `prometheus`, `kiali-server`, `grafana`) show deployed and workload pods are ready. Why install Istio base first? Why does Grafana need Prometheus?
 
-## 3. Configure and deploy the application — 10 minutes
+## 3. Configure and deploy the application — 12 minutes
 
-A **Deployment** maintains application copies (replicas), each in a **Pod** with an Istio proxy. A **Service** provides a stable address as pods change. Helm creates these objects from the app chart.
+Helm creates the app's **Deployment** and **Service** from the app chart; Kubernetes creates each **Pod** replica from the Deployment's template. You'll inspect these objects after installation.
 
 The **values file** `helm/values/student.yaml` overrides the app chart's defaults without changing its templates. The `message` setting becomes the `APP_MESSAGE` environment variable in the app container and the text returned in its HTTP response. See [Helm values files](https://helm.sh/docs/chart_template_guide/values_files/).
 
@@ -266,7 +280,13 @@ helm upgrade --install hello-oke ./charts/oke-mesh-app \
 kubectl -n oke-lab get deploy,pods,svc
 ```
 
-Expect `0 chart(s) failed` (an icon recommendation is informational), a `2/2` Ready Deployment, and two `2/2 Running` pods. Each pod's `2/2` means both `web` (HTTP app) and `istio-proxy` (mesh traffic) are ready.
+Expect `0 chart(s) failed` (an icon recommendation is informational), a `2/2` Ready Deployment, and two `2/2 Running` pods. These counts describe different things:
+
+| Where you look | What the count means |
+|---|---|
+| `kubectl get nodes` | Two worker machines run the cluster's workloads. |
+| Deployment `READY 2/2` | Two of the two desired app replicas are ready. |
+| Each pod's `READY 2/2` | Both `web` (HTTP app) and `istio-proxy` (mesh traffic) are ready inside that pod. |
 
 For optional container inspection or troubleshooting, see [Appendix B](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#appendix-b-optional-pod-inspection).
 
@@ -311,11 +331,11 @@ Expect one generator pod showing `2/2 Running` (`traffic` and its Istio proxy). 
 
 For optional details such as container state, restart counts, and events, see [traffic-generator inspection in Appendix B](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#traffic-generator-pod).
 
-**Checkpoint:** the app returns your customized message, two app replicas are ready, and the generator is running. Find `web` and `istio-proxy` in the architecture diagram and explain each container's job. Would replacing a pod require a new Service IP? If HTTP or traffic is still failing, ask for help before continuing.
+**Checkpoint:** the app returns your customized message, two app replicas are ready, and the separate generator pod is running. Trace the browser request to `web` in the architecture diagram, including the Service and `istio-proxy`. Which part of that path does the in-cluster generator bypass? Predict whether replacing an app pod would require a new Service IP. If HTTP or traffic is still failing, ask for help before continuing.
 
-## 4. Explore traffic in Kiali and Grafana — 7 minutes
+## 4. Explore traffic in Kiali and Grafana — 8 minutes
 
-A Kubernetes Service gives an application a stable network address, even when its pods change. Port-forwarding lets you access that Service from your Luna desktop using a local port. Use three terminals on the **same Luna desktop**:
+Port-forwarding lets you access an internal dashboard Service from your Luna desktop using a local port. Use three terminals on the **same Luna desktop**:
 
 | Terminal | Purpose |
 |---|---|
@@ -351,28 +371,28 @@ kubectl -n istio-system port-forward --address 127.0.0.1 svc/grafana 13000:80
 
 Expect `Forwarding from 127.0.0.1:13000`. Open **http://127.0.0.1:13000/d/oke-lab** in the desktop browser; Viewer access needs no login. For failed access or `address already in use`, see [port-forward troubleshooting](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#troubleshooting-dashboard-port-forwards).
 
-The **OKE Lab — Traffic & Scaling** dashboard opens with a 30-minute range and 15-second refresh. At baseline, look for:
+The **OKE Lab — Traffic & Scaling** dashboard opens with a 30-minute range and 15-second refresh. Before reading **Requests / second**, predict the rate from the generator's one request every two seconds. Compare your prediction with these baseline readings:
 
 - **Requests / second:** the average request rate over the last minute. Expect about 0.5 (one request every two seconds).
 - **Successful requests:** the percentage of requests with HTTP 2xx/3xx responses. Expect near 100% for healthy traffic.
 - **Request latency, p95:** estimated response time at the 95th percentile. A p95 of 100 ms means about 95% of requests finished within 100 ms. Record p95, not the average or p50.
 - **Application proxies up:** two successfully scraped application proxies, excluding the generator.
 - **Istiod scrape health:** `1` means Prometheus can scrape Istiod; this is not a complete control-plane health check.
-- **Traffic, latency, response codes, and proxy-count graphs:** history to compare with the upcoming load burst.
+- **Traffic, latency, response codes, and proxy-count graphs:** history to compare during manual scaling and, optionally, the HPA load burst.
 
-**Proxy count is not HPA desired replicas or pod readiness**; scrape discovery can lag. Confirm two Ready pods with `kubectl -n oke-lab get pods -l app=hello-oke`. The HPA is enabled in step 5, so record baseline HPA as `Not enabled`. Empty panels mean `no data`, not zero traffic or health ([troubleshooting](docs/troubleshooting.md)).
+**Proxy count is not pod readiness**; scrape discovery can lag. Confirm two Ready pods with `kubectl -n oke-lab get pods -l app=hello-oke`. HPA remains disabled throughout the core lab. Empty panels mean `no data`, not zero traffic or health ([troubleshooting](docs/troubleshooting.md)).
 
-**Checkpoint:** record baseline request rate, success rate, p95 latency, and proxy count in your [completion sheet (PDF)](docs/completion-sheet.pdf). Explain the baseline using the Kiali traffic edge and one Grafana reading. Which component supplies both views?
+**Checkpoint:** record baseline request rate, success rate, p95 latency, and proxy count in your [completion sheet (PDF)](docs/completion-sheet.pdf). Explain whether the request rate roughly matches the generator's interval. Trace the monitoring path from the proxies to Kiali and Grafana on the diagram. Record one dashboard metric and its source as evidence for question 2.
 
-Keep both dashboards open, using the same Grafana time range and p95 statistic throughout scaling. The [monitoring guide](docs/monitoring.md) covers queries and optional exercises.
+Keep both dashboards open, using the same Grafana time range and p95 statistic throughout scaling. More replicas do not generate more demand: baseline traffic continues about every two seconds. Observe proxy count alongside actual Ready pods. The [monitoring guide](docs/monitoring.md) covers queries and optional exercises.
 
 Ask for help if panels remain empty after two minutes of traffic.
 
-## 5. Scale manually and automatically — 15 minutes
+## 5. Scale manually — 7 minutes
 
 Return to **terminal 1 at the repository root**, using your verified lab context; leave both port-forwards running. For a new terminal, see [fresh-terminal setup in Appendix A](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#fresh-terminal-setup-errors).
 
-### Scale manually
+Kubernetes continually works toward **desired state**. Setting `replicaCount=4` asks for four app pods; the Deployment's ReplicaSet creates the additional pods needed to reach that count.
 
 Before scaling, predict what will happen to the app pod count, worker count, and Service IP. Note your predictions beside question 3 on the completion sheet, then increase the application from two to four replicas:
 
@@ -386,7 +406,7 @@ kubectl -n oke-lab get svc hello-oke
 for request in {1..10}; do curl --fail --max-time 10 "http://${APP_IP}/"; done
 ```
 
-Compare replicas, workers, Service IP, and response pod names with your predictions. Expect four Ready app replicas, unchanged Service IP, and two workers. A short request sequence need not reach each pod equally.
+Compare replicas, workers, Service IP, and response pod names with your predictions. Expect four Ready app replicas, unchanged Service IP, and two workers. Use the `NODE` column in the pod list to identify where the four pods run; do not assume an even split. Record pod count, worker names, and Service IP as evidence for question 3, and add dashboard readings to the manual-scaling row. A short request sequence need not reach each pod equally; your ten test requests can briefly raise the observed request rate above baseline.
 
 **Readiness and liveness:** a pod can be `Running` while its app or Istio proxy is still initializing. In this lab, `2/2` means both are ready.
 
@@ -395,14 +415,23 @@ Compare replicas, workers, Service IP, and response pod names with your predicti
 | Readiness | Can this container accept traffic now? | Marks the pod not Ready, keeping it out of normal Service traffic; does not restart the container. |
 | Liveness | Does this container need restarting? | Triggers a restart of the failing container, not replacement of the whole Deployment. |
 
-The [app chart](charts/oke-mesh-app/templates/application.yaml) checks `/healthz` for both probes; liveness starts after a 10-second initial delay. Inspect the `READY` and `RESTARTS` columns above. Could a pod be `Running` but not ready, with zero restarts? Record your reasoning under question 5 on the completion sheet. See the [Kubernetes probe guide](https://kubernetes.io/docs/concepts/workloads/pods/probes/) for more detail.
+The [app chart](charts/oke-mesh-app/templates/application.yaml) checks `/healthz` for both probes; liveness starts after a 10-second initial delay. Inspect the `READY` and `RESTARTS` columns above while the rollout settles. Could a pod be `Running` but not ready, with zero restarts? Record your reasoning under question 4 on the completion sheet. See the [Kubernetes probe guide](https://kubernetes.io/docs/concepts/workloads/pods/probes/) for more detail.
 
-Restore the starting size before enabling the HPA:
+Restore the starting size, then confirm the result:
 
 ```bash
 helm upgrade hello-oke ./charts/oke-mesh-app --namespace oke-lab \
   --reuse-values --set replicaCount=2 --wait --timeout 10m
+kubectl -n oke-lab get pods -l app=hello-oke
 ```
+
+**Core checkpoint:** two Ready app pods are restored, the Service IP and worker count are unchanged, and you have recorded baseline and manual-scaling observations. Fill in the restored row and questions 1–4 on the completion sheet. The core lab does not require an HPA, a load burst, or automatic scale-in. Go to **step 8** to finish, or choose an optional extension if time permits.
+
+## 6. Optional: CPU-based autoscaling — allow at least 15 minutes
+
+Start only after step 5 is complete and at least 15 minutes remain before debrief (by lab minute 40). Otherwise skip to step 8 or save this extension for a follow-up session. Keep the dashboards open and use terminal 1. The estimate includes setup, a five-minute burst, and scale-in; it is not a guarantee. If time runs short, reset the load using **Stop load and observe scale-in** below and record any unfinished observations.
+
+Use the completion sheet's **optional HPA** sections. Skipping this extension does not affect core completion.
 
 ### Enable CPU autoscaling
 
@@ -415,7 +444,7 @@ kubectl -n oke-lab top pods --containers
 
 Expect numeric readings in the CPU and memory columns. If metrics are unavailable, stop here and ask the instructor to check Metrics Server. **The Prometheus used by Kiali and Grafana does not supply this HPA's CPU metrics.**
 
-Enable the HPA to control app replicas, then inspect its target and conditions:
+With manual scaling, you choose the desired replica count. With autoscaling, the HPA chooses that count from CPU measurements; Kubernetes maintains the requested pods in both cases. Enable the HPA, then inspect its target and conditions:
 
 ```bash
 helm upgrade hello-oke ./charts/oke-mesh-app --namespace oke-lab \
@@ -431,15 +460,19 @@ NAME        REFERENCE              TARGETS       MINPODS   MAXPODS   REPLICAS   
 hello-oke   Deployment/hello-oke    cpu: 1%/60%   2         6         2          1m
 ```
 
-The HPA manages **2–6 application pods** and targets average CPU utilization of 60% of the `web` container's `100m` request, equivalent to `60m` per pod. It excludes the Istio sidecar's CPU. `100m` is one tenth of a CPU; the request is used for scheduling and HPA utilization, while the `250m` CPU limit caps the container's CPU use.
+The HPA manages **2–6 application pods** and targets average CPU utilization of 60% of the `web` container's `100m` request, equivalent to `60m` per pod. In `TARGETS`, `1%/60%` means current average utilization / target utilization. It excludes the Istio sidecar's CPU. `100m` is one tenth of a CPU; the request is used for scheduling and HPA utilization, while the `250m` CPU limit caps the container's CPU use.
+
+Trace the CPU-based autoscaling path on the diagram. Record the HPA's CPU metric source in the optional HPA debrief, and explain why Grafana is not part of this control loop.
 
 Rerun the two HPA checks until utilization is numeric and `ScalingActive=True`; ask for help after two minutes without metrics. Let any brief Helm-to-HPA replica dip settle at two Ready replicas before load. Do not manually scale while the HPA controls replicas.
 
-If the CPU request were `200m` with the same 60% target, what CPU usage would that mean? Write your calculation in the completion sheet's prediction field. Keep the lab's resource settings unchanged.
+If the CPU request were `200m` with the same 60% target, what CPU usage would that mean? Write your calculation in the optional HPA prediction field. Keep the lab's resource settings unchanged. Record the HPA baseline row before enabling load.
 
 ### Generate a five-minute CPU load
 
-Start by minute 47 to allow scale-in before minute 55. The generator sends two concurrent streams to `/work` for five minutes, then returns to low-rate `/` traffic:
+The `/work` endpoint performs CPU-intensive calculations before responding. Requests to it create CPU demand in the application pods; the HPA uses the resulting CPU measurements to decide whether to add replicas. Heavier requests do not necessarily mean more requests per second, so use app CPU to explain the scaling response.
+
+The generator sends two concurrent streams to `/work` for five minutes, then returns to low-rate `/` traffic:
 
 ```bash
 helm upgrade hello-oke ./charts/oke-mesh-app --namespace oke-lab \
@@ -462,7 +495,7 @@ Watch Grafana's **Traffic through Istio**, **Request latency**, and **Applicatio
 
 Baseline `/` and burst `/work` do different work; two concurrent streams produce a variable request rate. Because both workload and replicas change, this comparison cannot isolate autoscaling's effect on latency.
 
-Use one baseline reading and one load reading to compare request rate, p95 latency, and replicas with your partner. Explain the HPA and dashboard data sources. Record results even if they differ from your prediction.
+Use one baseline reading and one load reading to compare request rate, p95 latency, and replicas with your partner. Point to evidence of increased demand (app CPU), then evidence of Kubernetes' response (replica growth). Explain the HPA and dashboard data sources. Record results in the optional HPA table even if they differ from your prediction.
 
 ### Stop load and observe scale-in
 
@@ -480,11 +513,11 @@ Downscale stabilization is 60 seconds here (Kubernetes defaults to five minutes)
 
 Confirm two Ready pods with `kubectl -n oke-lab get pods -l app=hello-oke`. Keep Grafana at **Last 30 minutes**: rate should approach baseline and proxy count follow scale-in, retaining the peak. Prometheus retains two hours of data unless its pod is replaced. If blocked at minute 55, record the state and ask for help.
 
-**Checkpoint:** record initial, peak, and final HPA replicas. Finish when HPA and Ready app pods both return to two. Explain any lag in Grafana proxy count; complete the observation table and questions 2–4. See the [HPA guide](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/) for metrics and stabilization.
+**Optional HPA checkpoint:** record initial, peak, and final HPA replicas. Completion requires observed growth above two, HPA and Ready app pods both returning to two, and `traffic.loadEnabled=false`. Record both counts as evidence rather than relying on the dashboard alone, and explain any lag in proxy count. If blocked, mark the extension as blocked; this does not invalidate completed core work. See the [HPA guide](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/) for metrics and stabilization.
 
-## 6. Optional: observe pod recovery — 5 minutes
+## 7. Optional: observe pod recovery — 5 minutes
 
-Only proceed if step 5 finishes by minute 50; otherwise skip to step 7. Leave baseline traffic running. Predict whether deleting one pod changes desired replicas, then delete **one app pod**, not its Deployment:
+This extension does not require HPA. Start after step 5, only if at least five minutes remain before debrief (by lab minute 50); otherwise skip to step 8. If you also tried HPA, first finish its load reset and return to two Ready app pods. Leave baseline traffic running. Predict whether deleting one pod changes desired replicas, then delete **one app pod**, not its Deployment:
 
 ```bash
 POD_TO_REPLACE=$(kubectl -n oke-lab get pods -l app=hello-oke -o jsonpath='{.items[0].metadata.name}')
@@ -496,23 +529,37 @@ curl --fail --max-time 10 "http://${APP_IP}/"
 kubectl -n oke-lab get events --sort-by=.lastTimestamp
 ```
 
-**Checkpoint:** identify the replacement's new name. The Deployment's ReplicaSet restores the desired number of pods; this is self-healing, not an HPA scale-out. The Service IP stays the same. Inspect Kiali for any transient errors; deleting one of several healthy replicas need not cause a visible outage.
+**Checkpoint:** identify the replacement's new name. Manual scaling and HPA change the desired count; here, the Deployment's ReplicaSet replaces a missing pod to restore the same count. This is self-healing, not an HPA scale-out. Compare the old and new pod names and the unchanged Service IP as evidence. Inspect Kiali for any transient errors; deleting one of several healthy replicas need not cause a visible outage.
 
-## 7. Finish the lab
+## 8. Finish the lab
 
-Stop watches and dashboard forwards with Ctrl+C; this leaves the releases and in-cluster generator running. Check that burst mode is disabled:
+Complete the core sheet and debrief using your customized response, baseline dashboard readings, and manual 2 → 4 → 2 scaling observations. Mark optional extensions as skipped, completed, or blocked; they are not required for core completion.
+
+**Only if you attempted the HPA extension:** verify that you reset burst mode in step 6:
 
 ```bash
-helm get values hello-oke --namespace oke-lab
+helm get values hello-oke --namespace oke-lab --all
 ```
 
-Confirm `traffic.loadEnabled: false`; baseline traffic remains enabled. Complete your [sheet and debrief (PDF)](docs/completion-sheet.pdf), discuss readings and peak replicas with a partner or instructor, and record blocked checkpoints honestly.
+`--all` includes defaults, even if you stopped before enabling load. Confirm `traffic.loadEnabled: false`. If it is still true, run step 6's load-reset command before leaving and ask for help if it fails. Students who skipped HPA do not need this check; burst mode was never enabled.
+
+Stop watches and dashboard forwards with Ctrl+C; this leaves the releases and baseline generator running. Discuss your [sheet and debrief (PDF)](docs/completion-sheet.pdf) with a partner or instructor, and report any blocked core or optional checkpoint honestly.
 
 **Leave the app and Helm releases installed.** Luna starts cleanup when the session ends or expires.
 
 ## Appendix A: Troubleshooting
 
 Use the matching symptom, then return to your lab step. Appendix links open Luna Lab Steps; offline, scroll to the heading. These are optional diagnostics; also see the [full troubleshooting guide](docs/troubleshooting.md).
+
+### Open cluster details by URL
+
+Use this alternative only if needed after identifying your own cluster and region. Replace both placeholders:
+
+```text
+https://cloud.oracle.com/containers/clusters/<your-cluster-ocid>?region=<your-region>
+```
+
+**Example page only—not a shared student cluster:** [Phoenix cluster details](https://cloud.oracle.com/containers/clusters/ocid1.cluster.oc1.phx.aaaaaaaa5mwgyqarbllvk7xavr2qkvipop7ihd6i4i5vejaoxctcyaybtyaq?region=us-phoenix-1). Use your own cluster's OCID and region, not the example's.
 
 ### Preflight fails
 

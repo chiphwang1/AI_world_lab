@@ -61,9 +61,12 @@ class ClusterAccessMaterials(unittest.TestCase):
     def test_kubeconfig_is_created_before_commands_only_verification(self):
         readme = (ROOT / "README.md").read_text()
         creation, remainder = readme.split("### Verify your kubeconfig", 1)
-        self.assertIn("Copy and **run** the displayed `oci ce cluster create-kubeconfig` command", creation)
+        self.assertIn("Copy the displayed `oci ce cluster create-kubeconfig` command", creation)
         self.assertIn('Change `--file` to `"$HOME/.kube/oke-lab"`', creation)
-        self.assertIn('`umask 077` and `mkdir -p "$HOME/.kube"`', creation)
+        preparation = '   ```bash\n   umask 077\n   mkdir -p "$HOME/.kube"\n   ```'
+        self.assertIn(preparation, creation)
+        self.assertLess(creation.index(preparation), creation.index("oci ce cluster create-kubeconfig"))
+        self.assertIn("Run the edited command in **terminal 1** to create your kubeconfig", creation)
         verification = remainder.split("### Check cluster readiness", 1)[0]
         blocks = re.findall(r"```bash\n(.*?)```", verification, re.S)
         self.assertEqual(len(blocks), 1)

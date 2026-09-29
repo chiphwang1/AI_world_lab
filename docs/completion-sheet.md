@@ -2,28 +2,42 @@
 
 [Download the printable completion sheet (PDF)](completion-sheet.pdf). If it opens in your browser, use the PDF viewer's download button to save it. The Markdown version below is available for copying into your notes.
 
-Copy this sheet into your own notes. Fill it during the existing [lab checkpoints](../README.md), not as an extra exercise. Keep credentials, kubeconfig contents, and tokens out of your notes.
+Copy this sheet into your own notes. Fill it during the existing [lab checkpoints](../README.md), not as an extra exercise. Complete the core sections; HPA and pod recovery are optional. Keep credentials, kubeconfig contents, and tokens out of your notes.
 
 Name: __________  Date: __________  Tested repository revision: __________
 
-## Checkpoints
+## Core checkpoints
 
-- [ ] Preflight passed for my assigned context; two workers are Ready with numeric resource metrics.
+- [ ] Preflight passed for my cluster's current context; two workers are Ready with numeric resource metrics.
 - [ ] My public app returned my customized message; two app pods showed `2/2` Ready.
 - [ ] I identified `web` and `istio-proxy` and found `hello-oke-traffic → hello-oke` in Kiali.
 - [ ] Manual scaling changed app replicas 2 → 4 → 2; worker count and Service IP stayed unchanged.
-- [ ] HPA utilization became numeric; I observed scale-out above two and scale-in back to two.
-- [ ] I explicitly reset `traffic.loadEnabled=false` and confirmed two Ready app pods.
 
 My customized response message: __________
 
-## Observations
+## Core observations
 
-Use Grafana's **Last 30 minutes** range and p95 latency for each row. Run `kubectl -n oke-lab get hpa hello-oke` after enabling the HPA, and `kubectl -n oke-lab get pods -l app=hello-oke` for Ready app pods. Proxy count does not measure readiness. Record `no data` for an empty panel.
+Use Grafana's **Last 30 minutes** range and p95 latency for each row. Use `kubectl -n oke-lab get pods -l app=hello-oke` for Ready app pods. Proxy count can lag and does not measure readiness. Record `no data` for an empty panel. HPA stays disabled in the core lab.
+
+| Phase | Ready app pods | Requests/s | Success % | p95 latency (ms) | App proxies up |
+|---|---|---|---|---|---|
+| Baseline (2 replicas) | ___ | ___ | ___ | ___ | ___ |
+| Manual (4 replicas) | ___ | ___ | ___ | ___ | ___ |
+| Restored (2 replicas) | ___ | ___ | ___ | ___ | ___ |
+
+The baseline generator keeps the same request interval during manual scaling; more replicas do not create more traffic. Your manual curl requests may briefly increase the observed rate.
+
+## Optional HPA observations
+
+HPA extension: skipped / completed / blocked. Leave this section blank if skipped; it is not required for core completion. Run `kubectl -n oke-lab get hpa hello-oke` only after enabling HPA in step 6.
+
+- [ ] HPA CPU utilization became numeric before load.
+- [ ] I observed scale-out above two and scale-in back to two Ready app pods.
+- [ ] I explicitly reset `traffic.loadEnabled=false`, even if the extension was interrupted.
 
 | Phase | HPA replicas / Ready app pods | Requests/s | Success % | p95 latency (ms) | App proxies up |
 |---|---|---|---|---|---|
-| Baseline (`/`) | Not enabled / ___ | ___ | ___ | ___ | ___ |
+| HPA baseline (`/`) | ___ / ___ | ___ | ___ | ___ | ___ |
 | During load (`/work`) | ___ / ___ | ___ | ___ | ___ | ___ |
 | After scale-in (`/`) | ___ / ___ | ___ | ___ | ___ | ___ |
 
@@ -31,20 +45,39 @@ Peak HPA replica count observed: ___  Time load started: ___  Time scale-in fini
 
 Six replicas is a limit, not a required peak. The two endpoints do different work; this comparison does not isolate autoscaling's effect on latency.
 
-## Five-minute debrief
+## Core debrief
 
 1. Which Kubernetes object keeps the application reachable as pods change?
-2. Which component supplies this HPA's CPU metrics, and which supplies dashboard data?
+2. Which component supplies Kiali and Grafana with data? Explain one dashboard reading.
+
+My evidence (question 2): Dashboard metric/value: __________  Source: __________
+
 3. What changed during scaling: app replicas, worker nodes, Service IP?
-4. What proves scale-in finished? Why can Grafana's proxy count lag?
-5. Which probe removes an unready pod from normal Service traffic, and which can restart a container? Does Kiali's **Degraded** label identify a failed probe?
 
-Prediction from step 5: a `200m` CPU request with a 60% HPA target corresponds to ___ CPU usage.
+My evidence (question 3): App pods before/during/after: ____ / ____ / ____
 
-Optional pod recovery: skipped / completed / blocked. Replacement pod name, if observed: __________
+Worker names: ____________________  Service IP before/after: ____________________
 
-Result: completed / needs instructor help / demonstration only.
+4. Which probe removes an unready pod from normal Service traffic, and which can restart a container? Can a pod be Running but not Ready, with zero restarts?
+
+## Optional HPA debrief
+
+HPA metrics: CPU source: __________  Why is Grafana outside the scaling control loop? __________
+
+HPA scale-in: Final HPA replicas: ____  Ready app pods: ____  Why can proxy count lag? __________
+
+CPU prediction: a `200m` CPU request with a 60% HPA target corresponds to ___ CPU usage.
+
+## Optional pod recovery
+
+Pod recovery: skipped / completed / blocked. HPA is not a prerequisite.
+
+Recovery evidence: Old/new pod names: ____________________  Service IP changed? __________
+
+## Finish
+
+Core result: completed / needs instructor help / demonstration only. Skipped extensions do not affect this result.
 
 If blocked, record the step, symptom, and last observed state: __________
 
-Leave releases installed for Luna's session-end cleanup. Stop local watches and port-forwards after recording your results; doing so does not stop in-cluster traffic. Give the instructor your blocked checkpoint before leaving.
+Leave releases for Luna's cleanup. Reset any HPA burst before leaving. Stop watches and port-forwards; these do not stop in-cluster traffic. Report blocked checkpoints to the instructor.

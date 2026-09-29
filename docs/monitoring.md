@@ -1,6 +1,6 @@
 # Observe the application with Kiali and Grafana
 
-Complete steps 1–4 of the [student walkthrough](../README.md) first: Istio, Prometheus, Kiali, Grafana, and the Helm application must be installed, with traffic enabled. Kiali and Grafana are part of the 55-minute core lab; reserve the final five minutes for debrief and delays. This page provides reference commands and deeper checks; direct Prometheus exploration, controlled outages, and OCI exercises require time outside that hour. Use the Luna desktop and your dedicated lab kubeconfig.
+Complete steps 1–4 of the [student walkthrough](../README.md) first: Istio, Prometheus, Kiali, Grafana, and the Helm application must be installed, with traffic enabled. Kiali, Grafana, and manual scaling are part of the 55-minute core lab; reserve the final five minutes for debrief and delays. HPA is optional and stays disabled in the core. This page provides reference commands and deeper checks; direct Prometheus exploration, controlled outages, and OCI exercises require time outside that hour. Use the Luna desktop and your dedicated lab kubeconfig.
 
 ## Traffic and health
 
@@ -28,21 +28,27 @@ kubectl -n istio-system port-forward --address 127.0.0.1 svc/grafana 13000:80
 
 Open **http://127.0.0.1:13000/d/oke-lab** on the same workstation. The **OKE Lab — Traffic & Scaling** dashboard refreshes every 15 seconds and shows request rate, success rate, latency, response codes, application proxy count, and Istiod scrape health. Use a 30-minute time range to see the load test and scale-in together. No login is required for Viewer access. This setting is only for the disposable lab: the Service is reachable within the cluster, so never expose it using a public LoadBalancer, Ingress, or `--address 0.0.0.0`.
 
-The dashboard is provisioned from `helm/dashboards/oke-lab.json`; do not edit a temporary UI copy. Grafana storage is ephemeral, and Prometheus retains only two hours of metrics (lost earlier if its pod is replaced). Proxy count is an observation of successful scrapes, **not** an HPA desired/current replica metric. Follow the load commands below and compare Grafana with `kubectl -n oke-lab get hpa hello-oke` after enabling the HPA.
+The dashboard is provisioned from `helm/dashboards/oke-lab.json`; do not edit a temporary UI copy. Grafana storage is ephemeral, and Prometheus retains only two hours of metrics (lost earlier if its pod is replaced). Proxy count is an observation of successful scrapes, **not** pod readiness or an HPA desired/current replica metric. In the core, compare it with `kubectl -n oke-lab get pods -l app=hello-oke`. Only inspect HPA after enabling it in the optional extension.
 
 The four summary cards use instant queries evaluated at the end of the selected time range. Keep that range ending at **now**. Graphs retain range queries for history. Missing or undefined results display **No data**, rather than an earlier non-null value from the graph window. Scrape and rate windows still introduce delay; an instant query is not a live readiness test. See [Grafana query types](https://grafana.com/docs/grafana/latest/datasources/prometheus/query-editor/#type).
 
 Ignore the chart's generic administrator-login instructions; the lab uses anonymous Viewer access. Grafana's revised memory request/limit are 512Mi/1Gi, with a `512MiB` soft Go runtime target to leave process headroom. If browser access repeatedly fails, inspect [restart and memory evidence](troubleshooting.md#grafana-memory-and-repeated-restarts) rather than repeatedly opening new forwards.
 
-## Compare baseline, load, and recovery
+## Core: compare baseline and manual scaling
 
-During the walkthrough's Scale exercise, record Grafana request rate, latency, success rate, and proxy count before load, during `/work` traffic, and after returning to baseline. Compare with Kiali's traffic graph and the actual HPA replica count. Use `kubectl -n oke-lab top pods --containers` and `kubectl -n oke-lab describe hpa hello-oke` for CPU and scaling evidence; neither dashboard is the HPA's metric source.
+Use the completion sheet's core table to record Ready app pods and Grafana readings at two replicas, four replicas, and after restoring two. Baseline requests continue at the same interval; additional replicas do not create additional demand. Your manual curl requests can briefly increase the request rate. Compare proxy count with actual Ready pods and explain any discovery delay. Do not require a particular latency improvement under this low load.
 
-Use the observation table on the [completion sheet](completion-sheet.pdf) linked from step 4, and record the same latency statistic (p95) each time. Baseline requests call `/`, while the burst calls the more expensive `/work`. The generator maintains two concurrent streams rather than a fixed request rate. Explain changes in workload and replicas together; comparing those phases alone does not isolate autoscaling's effect on latency. If a panel has no data, record that instead of zero.
+Complete the core debrief without enabling HPA. The following HPA, Prometheus, outage, and OCI exercises are optional.
+
+## Optional: compare HPA baseline, load, and recovery
+
+During optional step 6, record Grafana request rate, latency, success rate, and proxy count before load, during `/work` traffic, and after returning to baseline. Compare with Kiali's traffic graph and the actual HPA replica count. Use `kubectl -n oke-lab top pods --containers` and `kubectl -n oke-lab describe hpa hello-oke` for CPU and scaling evidence; neither dashboard is the HPA's metric source.
+
+Use the optional HPA observation table on the [completion sheet](completion-sheet.pdf), and record the same latency statistic (p95) each time. Baseline requests call `/`, while the burst calls `/work`, which performs CPU-intensive calculations. The generator maintains two concurrent streams rather than a fixed request rate. Heavier requests need not increase requests per second; use app CPU to explain the HPA response. Explain changes in workload and replicas together; comparing those phases alone does not isolate autoscaling's effect on latency. If a panel has no data, record that instead of zero.
 
 Deleting one pod during Recover tests the Deployment controller's self-healing. It does not guarantee a visible outage: other replicas can continue serving requests. Use the optional exercise below only if you want to see a deliberate complete loss of application endpoints.
 
-## Prometheus browser checks and repeatable load
+## Optional: Prometheus browser checks and repeatable load
 
 With the lab kubeconfig selected, open a second localhost-only port-forward:
 
@@ -99,7 +105,7 @@ kubectl -n oke-lab scale deployment/hello-oke --replicas=2
 kubectl -n oke-lab rollout status deployment/hello-oke --timeout=300s
 ```
 
-The client's proxy should record failures while the service has no ready endpoints. After restoring the app, new requests should succeed. A five-minute graph still includes older errors until they age out; do not confuse historical errors with a continuing outage. Helm's desired replica count remains two; the HPA stays disabled until you explicitly enable it again using step 5 of the walkthrough.
+The client's proxy should record failures while the service has no ready endpoints. After restoring the app, new requests should succeed. A five-minute graph still includes older errors until they age out; do not confuse historical errors with a continuing outage. Helm's desired replica count remains two; the HPA stays disabled unless you explicitly enable it using optional step 6 of the walkthrough.
 
 ## Kubernetes evidence
 

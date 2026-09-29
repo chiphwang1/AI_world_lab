@@ -51,10 +51,21 @@ def main():
             raise ValueError(f"Expected exactly one line starting {prefix!r}")
         return plain(matches[0])
 
-    checks = [plain(line[6:]) for line in lines if line.startswith("- [ ] ")]
-    questions = [plain(line) for line in lines if re.match(r"^[1-5]\. ", line)]
-    rows = [line for line in lines if line.startswith("| ")]
-    if len(checks) != 6 or len(questions) != 5 or len(rows) != 4:
+    def section(title):
+        return source.split(f"## {title}\n", 1)[1].split("\n## ", 1)[0].splitlines()
+
+    def checks(title):
+        return [plain(line[6:]) for line in section(title) if line.startswith("- [ ] ")]
+
+    def rows(title):
+        return [line for line in section(title) if line.startswith("| ")]
+
+    core_checks = checks("Core checkpoints")
+    hpa_checks = checks("Optional HPA observations")
+    core_rows = rows("Core observations")
+    hpa_rows = rows("Optional HPA observations")
+    questions = [plain(line) for line in section("Core debrief") if re.match(r"^[1-4]\. ", line)]
+    if (len(core_checks), len(hpa_checks), len(questions), len(core_rows), len(hpa_rows)) != (4, 3, 4, 4, 4):
         raise ValueError("Completion-sheet structure changed; review PDF layout")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -67,7 +78,7 @@ def main():
         p = Paragraph(escape(text), style)
         _, height = p.wrap(width, HEIGHT)
         if y-height < 48:
-            raise ValueError(f"Content exceeds printable page: {text[:50]}")
+            raise ValueError(f"Content exceeds printable page (bottom={y-height}): {text[:50]}")
         p.drawOn(pdf, x, y-height)
         return y-height
 
@@ -97,55 +108,72 @@ def main():
         pdf.drawRightString(RIGHT, 27, f"{number} / 2")
         return 673
 
-    y = page(1, "Record evidence at the existing checkpoints - no extra exercise.")
-    y = paragraph("Keep credentials, kubeconfig contents, and tokens out of this sheet.", y, SMALL)-15
-    y = paragraph(one("Name:"), y)-18
-    y = heading("Checkpoints", y)
-    for check in checks:
-        pdf.setStrokeColor(TEAL)
-        pdf.rect(LEFT, y-10, 8, 8, fill=0, stroke=1)
-        y = paragraph(check, y, x=LEFT+17, width=RIGHT-LEFT-17)-8
-    y = paragraph("My customized response message:", y-3)-14
-    rule(y)
-    y = heading("Observations", y-17)
-    y = paragraph(one("Use Grafana"), y, SMALL)-10
+    def checklist(items, y):
+        for check in items:
+            pdf.setStrokeColor(TEAL)
+            pdf.rect(LEFT, y-10, 8, 8, fill=0, stroke=1)
+            y = paragraph(check, y, SMALL, x=LEFT+17, width=RIGHT-LEFT-17)-8
+        return y
 
-    table_rows = []
-    for row in rows:
-        cells = [plain(value.strip()) for value in row.strip("|").split("|")]
-        table_rows.append([Paragraph(escape(value), CELL) for value in cells])
-    table = Table(table_rows, colWidths=[104, 122, 65, 66, 88, 83],
-                  rowHeights=[34, 33, 33, 33])
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), PALE),
-        ("GRID", (0, 0), (-1, -1), 0.5, RULE),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 7),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-    ]))
-    _, height = table.wrap(RIGHT-LEFT, HEIGHT)
-    table.drawOn(pdf, LEFT, y-height)
-    y -= height+14
-    y = paragraph(one("Peak HPA"), y, SMALL)-8
-    paragraph(one("Six replicas"), y, SMALL)
+    def observations(table_source, y):
+        table_rows = []
+        for row in table_source:
+            cells = [plain(value.strip()) for value in row.strip("|").split("|")]
+            table_rows.append([Paragraph(escape(value), CELL) for value in cells])
+        table = Table(table_rows, colWidths=[104, 122, 65, 66, 88, 83],
+                      rowHeights=[34, 28, 28, 28])
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), PALE),
+            ("GRID", (0, 0), (-1, -1), 0.5, RULE),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 7),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+        ]))
+        _, height = table.wrap(RIGHT-LEFT, HEIGHT)
+        if y-height < 48:
+            raise ValueError("Observation table exceeds printable page")
+        table.drawOn(pdf, LEFT, y-height)
+        return y-height
+
+    y = page(1, "Record core observations; leave optional HPA sections blank if skipped.")
+    y = paragraph("Keep credentials, kubeconfig contents, and tokens out of this sheet.", y, SMALL)-10
+    y = paragraph(one("Name:"), y)-12
+    y = heading("Core checkpoints", y)
+    y = checklist(core_checks, y)
+    y = paragraph("My customized response message:", y-3)-12
+    rule(y)
+    y = heading("Core observations", y-12)
+    y = paragraph(one("Use Grafana"), y, SMALL)-8
+    y = observations(core_rows, y)-10
+    y = paragraph(one("The baseline generator"), y, SMALL)-12
+    y = heading("Optional HPA observations - not required", y)
+    y = paragraph(one("HPA extension:"), y, SMALL)-8
+    observations(hpa_rows, y)
     pdf.showPage()
 
-    y = page(2, "Five-minute debrief - explain what you observed.")
-    y = paragraph("Name: ______________________________    Date: __________________", y)-19
-    for question in questions:
-        y = paragraph(question, y)-18
+    y = page(2, "Core debrief and optional extension notes.")
+    y = paragraph("Name: ______________________________    Date: __________________", y)-12
+    y = heading("Core debrief", y)
+    for number, question in enumerate(questions, start=1):
+        y = paragraph(question, y)-14
         rule(y)
-        y -= 18
-        rule(y)
-        y -= 17
-    y = paragraph(one("Prediction from"), y, SMALL)-14
-    y = paragraph(one("Optional pod recovery:"), y, SMALL)-14
-    y = paragraph(one("Result:"), y, SMALL)-13
-    y = paragraph("If blocked, record the step, symptom, and last observed state:", y, SMALL)-17
+        y -= 9
+        if number in (2, 3):
+            y = paragraph(one(f"My evidence (question {number}):"), y, SMALL)-4
+        if number == 3:
+            y = paragraph(one("Worker names:"), y, SMALL)-4
+        y -= 6
+    y = heading("Optional HPA checklist and debrief", y)
+    y = checklist(hpa_checks, y)
+    for prefix in ("Peak HPA", "Six replicas", "HPA metrics:", "HPA scale-in:", "CPU prediction:"):
+        y = paragraph(one(prefix), y, SMALL)-5
+    y = heading("Optional pod recovery", y)
+    y = paragraph(one("Pod recovery:"), y, SMALL)-7
+    y = paragraph(one("Recovery evidence:"), y, SMALL)-12
+    y = paragraph(one("Core result:"), y, SMALL)-9
+    y = paragraph("If blocked, record the step, symptom, and last observed state:", y, SMALL)-14
     rule(y)
-    y -= 18
-    rule(y)
-    y -= 17
+    y -= 12
     paragraph(one("Leave releases"), y, SMALL)
     pdf.save()
     print(args.output)
