@@ -43,7 +43,8 @@ else:
 
 class CheckReady(unittest.TestCase):
     def run_check(self, arguments=None, wrong_directory=False, missing_config=False,
-                  extra_config=False, empty_config=False, missing_tool=None, **overrides):
+                  extra_config=False, empty_config=False, missing_tool=None,
+                  default_config=False, **overrides):
         with tempfile.TemporaryDirectory() as directory:
             directory = Path(directory)
             binary_dir = directory / "bin"
@@ -59,6 +60,9 @@ class CheckReady(unittest.TestCase):
             for name in ("awk", "sed"):
                 (binary_dir / name).symlink_to(Path("/usr/bin") / name)
             config = directory / "kubeconfig"
+            if default_config:
+                config = directory / ".kube" / "config"
+                config.parent.mkdir()
             if not missing_config:
                 config.write_text("" if empty_config else "mock config; never parsed by real kubectl\n")
             selected_config = str(config)
@@ -67,12 +71,16 @@ class CheckReady(unittest.TestCase):
                 second.write_text("second mock config\n")
                 selected_config += ":" + str(second)
             log = directory / "calls"
+            environment = {**os.environ, "PATH": str(binary_dir), "CALL_LOG": str(log),
+                           "KUBECONFIG": selected_config, **overrides}
+            if default_config:
+                environment["HOME"] = str(directory)
+                environment.pop("KUBECONFIG", None)
             result = subprocess.run(
                 ["/bin/bash", str(ROOT / "scripts/check-ready.sh"),
                  *(arguments if arguments is not None else [])],
                 cwd=directory if wrong_directory else ROOT,
-                env={**os.environ, "PATH": str(binary_dir), "CALL_LOG": str(log),
-                     "KUBECONFIG": selected_config, **overrides},
+                env=environment,
                 text=True, capture_output=True, timeout=10,
             )
             calls = [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
@@ -129,6 +137,18 @@ class CheckReady(unittest.TestCase):
     def test_multiple_kubeconfig_files_are_supported(self):
         result, _ = self.run_check(extra_config=True)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_default_kubeconfig_without_environment_override(self):
+        result, calls = self.run_check(default_config=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Preflight passed", result.stdout)
+        self.assertEqual(len(calls), 5)
+
+    def test_missing_default_kubeconfig_stops_before_kubectl(self):
+        result, calls = self.run_check(default_config=True, missing_config=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(".kube/config is missing", result.stderr)
+        self.assertEqual(calls, [])
 
     def test_api_failure_is_actionable_and_does_not_print_auth_output(self):
         result, calls = self.run_check(FAIL_AT="api")

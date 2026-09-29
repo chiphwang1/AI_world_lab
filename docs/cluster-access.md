@@ -18,14 +18,14 @@ Replace the three placeholders below before running. This example uses the lab's
 export LAB_REGION='<your-session-region>'
 export LAB_CLUSTER_OCID='<your-cluster-ocid>'
 export LAB_OCI_PROFILE='<your-session-profile>'
-export KUBECONFIG="$HOME/.kube/oke-lab"
+unset KUBECONFIG
 umask 077
 mkdir -p "$HOME/.kube"
 oci ce cluster create-kubeconfig --cluster-id "$LAB_CLUSTER_OCID" \
-  --region "$LAB_REGION" --file "$KUBECONFIG" \
+  --region "$LAB_REGION" --file "$HOME/.kube/config" \
   --token-version 2.0.0 --kube-endpoint PRIVATE_ENDPOINT \
   --profile "$LAB_OCI_PROFILE" --auth api_key --with-auth-context &&
-chmod 600 "$KUBECONFIG"
+chmod 600 "$HOME/.kube/config"
 ```
 
 This writes connection settings for an existing cluster. `--file` selects the destination, and `--with-auth-context` preserves the selected profile and authentication mode for later token generation. If the file already contains contexts, Oracle's command merges the cluster details and selects the added context. Do not add `--overwrite`. See [Oracle's kubeconfig command reference](https://docs.oracle.com/en-us/iaas/tools/oci-cli/latest/oci_cli_docs/cmdref/ce/cluster/create-kubeconfig.html) and [cluster access guide](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm).
@@ -42,9 +42,9 @@ Open the Cloud Shell menu at the top left, choose **Download**, enter `oke-lab-k
 
 ```bash
 mkdir -p "$HOME/.kube"
-cp -i "$HOME/Downloads/oke-lab-kubeconfig" "$HOME/.kube/oke-lab"
-chmod 600 "$HOME/.kube/oke-lab"
-export KUBECONFIG="$HOME/.kube/oke-lab"
+cp -i "$HOME/Downloads/oke-lab-kubeconfig" "$HOME/.kube/config"
+chmod 600 "$HOME/.kube/config"
+unset KUBECONFIG
 export OCI_CLI_PROFILE='<your-session-profile>'
 export OCI_CLI_AUTH=api_key
 ```
@@ -55,11 +55,11 @@ A downloaded kubeconfig does not establish network access or grant permissions. 
 
 ## Verify the selected file and context
 
-`KUBECONFIG` selects a file; the current context selects an entry inside it. Changing directories does not select a cluster. Set `KUBECONFIG` once in each new terminal, using the same path as the walkthrough; no need to repeat the export between commands:
+kubectl and Helm use `~/.kube/config` by default; the current context selects an entry inside it. Changing directories does not select a cluster. In each new terminal, clear any inherited `KUBECONFIG` override so all lab commands use the default file:
 
 ```bash
-export KUBECONFIG="$HOME/.kube/oke-lab"
-printf 'Kubeconfig: %s\n' "$KUBECONFIG"
+unset KUBECONFIG
+ls -l "$HOME/.kube/config"
 kubectl config get-contexts
 kubectl config current-context
 ```
@@ -74,7 +74,7 @@ This saves the selection in the kubeconfig. New terminals using that file share 
 
 If your cluster's context is absent, confirm the file path or generate the kubeconfig above. `no context exists` refers to the selected file; the same context may exist in another kubeconfig. Return to the README's read-only preflight check, which uses the current context without a `--context` argument.
 
-For the maintainer's existing local rehearsal, follow [the rehearsal environment instructions](rehearsal-2026-09-18.md#reuse-and-ongoing-cost). That environment uses a dedicated project kubeconfig; its private files are not distributed to learners. When using that path, use it consistently in the dashboard terminals too.
+The default-file instructions above apply to the Luna desktop. For the maintainer's existing local rehearsal, follow [the rehearsal environment instructions](rehearsal-2026-09-18.md#reuse-and-ongoing-cost). That separate environment uses a dedicated project kubeconfig; its private files are not distributed to learners. Retain its explicit `KUBECONFIG` override in every terminal instead of running the Luna-specific `unset KUBECONFIG` commands.
 
 ## Optional extension: discover the cluster with OCI CLI
 

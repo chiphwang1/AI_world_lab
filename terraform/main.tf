@@ -24,7 +24,10 @@ module "oke" {
     KubernetesMetricsServer = {}
   }
 
-  create_vcn                  = true
+  create_vcn = true
+  # The root module manages the lab's default security list instead.
+  # null disables both the VCN module's lockdown and restore-default resources.
+  lockdown_default_seclist    = null
   vcn_cidrs                   = [var.vcn_cidr]
   pods_cidr                   = var.pods_cidr
   services_cidr               = var.services_cidr

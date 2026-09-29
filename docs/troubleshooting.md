@@ -2,10 +2,11 @@
 
 ## Learner checks
 
-Use your Luna desktop's `KUBECONFIG=$HOME/.kube/oke-lab` and confirm the context. Do not troubleshoot against a shared or production cluster.
+On your Luna desktop, run `unset KUBECONFIG` to use the default `~/.kube/config` and confirm the context. Do not troubleshoot against a shared or production cluster.
 
 | Symptom | Check / next step |
 |---|---|
+| Copy says “Copied,” but nothing pastes into the Luna terminal | In the outer Chrome browser, allow clipboard access for `https://luna.oracle.com`, copy again, then use the remote terminal's **Edit → Paste** or **Ctrl+Shift+V** (not Mac **Cmd+V**). For the manual Clipboard-box fallback, see [Copy and paste in Luna](../README.md#copy-and-paste-in-luna). Do not end or relaunch the lab. |
 | Desktop ready, but no cluster | Infrastructure may still be provisioning. Ask the instructor for the Luna pipeline status; do not run Terraform yourself. |
 | `no context exists`, wrong cluster, or missing kubeconfig | Follow [cluster access](cluster-access.md#verify-the-selected-file-and-context). Check `KUBECONFIG` and `kubectl config get-contexts` in the affected terminal; changing directories does not select a cluster. |
 | Authentication works in one terminal but fails in another | Use the same kubeconfig and OCI credential configuration in each terminal. For named profiles, generate the kubeconfig with `--with-auth-context`; a custom `OCI_CLI_CONFIG_FILE` setting must also be supplied in new terminals. Never print keys or generated tokens. |
@@ -87,7 +88,7 @@ Instructor: record the live resources and termination reason before changing val
 To check Istio metrics, run this in a separate desktop terminal:
 
 ```bash
-export KUBECONFIG="$HOME/.kube/oke-lab"
+unset KUBECONFIG
 kubectl -n istio-system port-forward --address 127.0.0.1 svc/prometheus-server 9090:80
 ```
 

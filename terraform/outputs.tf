@@ -23,6 +23,6 @@ output "deployment_target" {
 }
 
 output "kubeconfig_command" {
-  description = "Run with the intended OCI profile/auth selected, then export KUBECONFIG=$HOME/.kube/oke-lab."
-  value       = "oci ce cluster create-kubeconfig --cluster-id ${module.oke.cluster_id} --region ${var.region} --token-version 2.0.0 --file \"$HOME/.kube/oke-lab\" --kube-endpoint ${var.control_plane_is_public ? "PUBLIC_ENDPOINT" : "PRIVATE_ENDPOINT"} --with-auth-context"
+  description = "Run with the intended OCI profile/auth selected. Writes the default ~/.kube/config; unset KUBECONFIG to clear any prior override before using kubectl or Helm."
+  value       = "oci ce cluster create-kubeconfig --cluster-id ${module.oke.cluster_id} --region ${var.region} --token-version 2.0.0 --file \"$HOME/.kube/config\" --kube-endpoint ${var.control_plane_is_public ? "PUBLIC_ENDPOINT" : "PRIVATE_ENDPOINT"} --with-auth-context"
 }

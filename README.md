@@ -51,6 +51,8 @@ Start the Luna lab when the lecture begins so the cluster can provision during t
 
 ## 1. Prepare and confirm your connection — 10 minutes
 
+Use each code block's **Copy** button, then **Edit → Paste** in the Luna terminal (or **Ctrl+Shift+V**, not **Cmd+V**). If nothing pastes, see [Copy and paste in Luna](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#copy-and-paste-in-luna) in Appendix A.
+
 In a **Bash terminal** on your Luna desktop, download the lab repository. Keep this window open as **terminal 1**:
 
 ```bash
@@ -75,7 +77,7 @@ If session details are missing, stop and ask the instructor; do not use a person
 
 Use the assigned compartment and region shown in Luna Lab.
 
-Your **kubeconfig** tells kubectl which cluster to connect to and how to authenticate. You'll create it on your Luna desktop, then select the file with `KUBECONFIG`. Follow the Console route below; the [access guide](docs/cluster-access.md) is for additional authentication details or troubleshooting.
+Your **kubeconfig** tells kubectl which cluster to connect to and how to authenticate. Create it at `~/.kube/config` on your Luna desktop—the default location used by kubectl and Helm. Follow the Console route below; the [access guide](docs/cluster-access.md) is for additional authentication details or troubleshooting.
 
 1. Select your **region** in the OCI Console. Open the upper-left navigation menu → **Developer Services → Containers & Artifacts → Kubernetes Clusters (OKE)**. See [Oracle's navigation instructions](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/list-clusters.htm).
 2. Open the **Compartment** filter. Expand the compartment hierarchy if needed and select the exact **Compartment Name** shown on your Luna Lab page. Do not choose a compartment just because its name begins with `luna`, and do not use the tenancy root.
@@ -90,7 +92,7 @@ Your **kubeconfig** tells kubectl which cluster to connect to and how to authent
 
 6. Copy the displayed `oci ce cluster create-kubeconfig` command from **Access cluster → Local Access**. Before running it:
 
-   - Change `--file` to `"$HOME/.kube/oke-lab"`.
+   - Use `--file "$HOME/.kube/config"` (the default location).
    - Keep **your cluster's** OCID, region, and endpoint.
    - Follow the [desktop OCI authentication settings](docs/cluster-access.md#generate-your-kubeconfig-on-the-desktop).
    - Do not add `--overwrite`.
@@ -100,9 +102,9 @@ Your **kubeconfig** tells kubectl which cluster to connect to and how to authent
 ### Verify your kubeconfig
 
 ```bash
-export KUBECONFIG="$HOME/.kube/oke-lab"
-ls -l "$KUBECONFIG" &&
-test -s "$KUBECONFIG" &&
+unset KUBECONFIG
+ls -l "$HOME/.kube/config" &&
+test -s "$HOME/.kube/config" &&
 kubectl config get-contexts &&
 kubectl config current-context
 ```
@@ -153,7 +155,7 @@ Expect a path ending in `oke-bootcamp`, your cluster's context, two `Ready` work
 
 **Checkpoint:** confirm those results. Which file selects your Kubernetes connection, and which component supplies CPU metrics?
 
-`KUBECONFIG` points to `~/.kube/oke-lab`; the selected context inside that file identifies the cluster and user. Metrics Server supplies the resource metrics used by `kubectl top` and this lab's HPA; Prometheus supplies the dashboard metrics. See [kubectl top node](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_top/kubectl_top_node/).
+kubectl and Helm use `~/.kube/config` by default; its selected context identifies the cluster and user. `unset KUBECONFIG` clears any previous override so the default file is used. Metrics Server supplies the resource metrics used by `kubectl top` and this lab's HPA; Prometheus supplies the dashboard metrics. See [kubectl top node](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_top/kubectl_top_node/).
 
 ## 2. Install Istio, Prometheus, Kiali, and Grafana — 18 minutes
 
@@ -343,14 +345,14 @@ Port-forwarding lets you access an internal dashboard Service from your Luna des
 | 2 | Kiali port-forward; leave running |
 | 3 | Grafana port-forward; leave running |
 
-Set `KUBECONFIG` once in each new terminal, substituting your path if different. The selected context stays saved in the file until changed. Open forwards while baseline metrics accumulate.
+Each new terminal uses the same default `~/.kube/config`. Clear any inherited override with `unset KUBECONFIG`; no path export is needed. The selected context stays saved in the file until changed. Open forwards while baseline metrics accumulate.
 
 ### Kiali: service-to-service traffic
 
 In **terminal 2** on the same Luna desktop:
 
 ```bash
-export KUBECONFIG="$HOME/.kube/oke-lab"
+unset KUBECONFIG
 kubectl -n istio-system port-forward --address 127.0.0.1 svc/kiali 20001:20001
 ```
 
@@ -365,7 +367,7 @@ If Kiali shows **Degraded**, see [Kiali health warnings in Appendix A](https://l
 Leave the Kiali port-forward running. In **terminal 3** on the same desktop:
 
 ```bash
-export KUBECONFIG="$HOME/.kube/oke-lab"
+unset KUBECONFIG
 kubectl -n istio-system port-forward --address 127.0.0.1 svc/grafana 13000:80
 ```
 
@@ -551,6 +553,16 @@ Stop watches and dashboard forwards with Ctrl+C; this leaves the releases and ba
 
 Use the matching symptom, then return to your lab step. Appendix links open Luna Lab Steps; offline, scroll to the heading. These are optional diagnostics; also see the [full troubleshooting guide](docs/troubleshooting.md).
 
+### Copy and paste in Luna
+
+The instructions are in your computer's browser; the Luna terminal runs on a separate Linux desktop. Clipboard access connects the two.
+
+1. In the **outer Chrome browser**, check the clipboard icon beside the address bar. If it says clipboard access is blocked, choose **Always allow https://luna.oracle.com to see the clipboard**, then **Done**. This permission lets Luna read copied text and images; grant it only to the trusted Luna site.
+2. Copy the code block again, click inside the Luna terminal, and use **Edit → Paste** or **Ctrl+Shift+V**. **Cmd+V** is your Mac's shortcut, not the Linux terminal's. Check the pasted command before pressing Enter.
+3. If automatic transfer still fails, open **Clipboard** in Luna's bottom toolbar. Paste the copied command into that box using your computer's shortcut (**Cmd+V** on Mac; **Ctrl+V** on Windows/Linux), close the box, then use the terminal's **Edit → Paste**.
+
+Do not end or relaunch the lab to fix clipboard permissions. If Chrome requests a reload, save any browser form edits and reload only the Luna page. If your organization prevents changing the permission, use the manual Clipboard box or ask the instructor.
+
 ### Open cluster details by URL
 
 Use this alternative only if needed after identifying your own cluster and region. Replace both placeholders:
@@ -572,7 +584,7 @@ Correct the first `FAIL` before rerunning preflight; the script stops there with
 
 ### Fresh-terminal setup errors
 
-In a new terminal, use the existing checkout, `KUBECONFIG`, and required OCI settings. Verify `kubectl config current-context`. A correct saved context needs no reselection or regenerated kubeconfig.
+In a new terminal, use the existing checkout and required OCI settings. Run `unset KUBECONFIG` to use the default `~/.kube/config`, then verify `kubectl config current-context`. A correct saved context needs no reselection or regenerated kubeconfig.
 
 - `path "./charts/oke-mesh-app" not found`: the relative chart path is wrong for your current directory. Return to the repository root, where `README.md`, `charts/`, and `helm/` are located.
 - Connection refused at `localhost:8080`: usually no usable cluster configuration was selected. Follow [cluster access](docs/cluster-access.md#verify-the-selected-file-and-context); changing directories alone does not select a cluster.

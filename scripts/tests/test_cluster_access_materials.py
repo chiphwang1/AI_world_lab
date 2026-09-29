@@ -61,7 +61,7 @@ class ClusterAccessMaterials(unittest.TestCase):
         access = (ROOT / "docs/cluster-access.md").read_text()
         self.assertIn("Console login does not authenticate this terminal", access)
         self.assertIn("[desktop OCI authentication settings](docs/cluster-access.md#generate-your-kubeconfig-on-the-desktop)", readme)
-        self.assertIn('export KUBECONFIG="$HOME/.kube/oke-lab"', readme)
+        self.assertIn('unset KUBECONFIG', readme)
         self.assertIn("Do not add `--overwrite`", readme)
         self.assertIn("Example page only—not a shared student cluster", readme)
         self.assertIn("bash scripts/check-ready.sh", readme)
@@ -70,7 +70,7 @@ class ClusterAccessMaterials(unittest.TestCase):
         readme = (ROOT / "README.md").read_text()
         creation, remainder = readme.split("### Verify your kubeconfig", 1)
         self.assertIn("Copy the displayed `oci ce cluster create-kubeconfig` command", creation)
-        self.assertIn('Change `--file` to `"$HOME/.kube/oke-lab"`', creation)
+        self.assertIn('Use `--file "$HOME/.kube/config"`', creation)
         preparation = '   ```bash\n   umask 077\n   mkdir -p "$HOME/.kube"\n   ```'
         self.assertIn(preparation, creation)
         self.assertLess(creation.index(preparation), creation.index("oci ce cluster create-kubeconfig"))
@@ -79,9 +79,9 @@ class ClusterAccessMaterials(unittest.TestCase):
         blocks = re.findall(r"```bash\n(.*?)```", verification, re.S)
         self.assertEqual(len(blocks), 1)
         self.assertEqual(blocks[0].splitlines(), [
-            'export KUBECONFIG="$HOME/.kube/oke-lab"',
-            'ls -l "$KUBECONFIG" &&',
-            'test -s "$KUBECONFIG" &&',
+            'unset KUBECONFIG',
+            'ls -l "$HOME/.kube/config" &&',
+            'test -s "$HOME/.kube/config" &&',
             'kubectl config get-contexts &&',
             'kubectl config current-context',
         ])
@@ -118,9 +118,9 @@ class ClusterAccessMaterials(unittest.TestCase):
     def test_setup_runs_once_and_new_dashboard_terminals_select_the_same_file(self):
         readme = (ROOT / "README.md").read_text()
         core = readme.split("## Appendix A:", 1)[0]
-        export = 'export KUBECONFIG="$HOME/.kube/oke-lab"'
-        self.assertEqual(core.count(export), 3)
-        self.assertEqual(core.split("## 2.", 1)[0].count(export), 1)
+        export = 'unset KUBECONFIG'
+        self.assertEqual(core.count(f"\n{export}\n"), 3)
+        self.assertEqual(core.split("## 2.", 1)[0].count(f"\n{export}\n"), 1)
         self.assertEqual(core.count("bash scripts/check-ready.sh"), 1)
         self.assertEqual(core.count("bash scripts/prepare-charts.sh --check"), 1)
         self.assertNotIn("LAB_CONTEXT", readme)
