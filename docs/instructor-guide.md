@@ -170,38 +170,42 @@ The private GitHub mirror and GitLab source must publish the same immutable mate
 
 ## Suggested Luna description
 
-Deploy, monitor, and manually scale an application on a Luna-provisioned Oracle Kubernetes Engine (OKE) cluster. Use Helm, a package manager for Kubernetes, to install and configure your application and monitoring tools. Istio manages application traffic and reports request metrics; Prometheus collects and stores those metrics; Kiali maps service traffic and health; and Grafana charts metrics over time. Observe baseline traffic and change application replicas from two to four and back. CPU-based autoscaling and pod recovery are optional extensions for early finishers or a follow-up session.
+**Luna title:** OKE Bootcamp: Deploy, Monitor, and Scale an Application
+
+Maintain the Luna Overview using the description below. When publishing lab updates, check both Overview and Lab Steps; updating the README does not update the separately maintained Overview.
+
+Learn the process of deploying, monitoring, and scaling an application on Oracle Kubernetes Engine (OKE), OCI's managed Kubernetes service. You'll use Helm to deploy a customized web application, observe its traffic with Istio, Prometheus, Kiali, and Grafana, and scale its replicas manually. These are common open-source tools for managing and monitoring applications on Kubernetes. Luna creates your cluster and starts cleanup when your session ends.
 
 ### What you will build
 
-- **Application on OKE:** A customized Helm deployment running on your Luna-provisioned cluster, exposed through an OCI LoadBalancer.
-- **Istio service mesh:** Proxies alongside your application containers to observe traffic.
-- **Prometheus metrics store:** Collects and stores request metrics from Istio for Kiali and Grafana to query.
-- **Kiali traffic graph:** Maps communication between services and shows request rates, errors, latency, and workload health.
-- **Grafana dashboard:** Plots metrics over time so you can compare baseline traffic, load, and scaling.
-- **Baseline traffic and manual scaling:** A traffic generator to make requests while you change replica counts.
-- **Optional autoscaling:** A Horizontal Pod Autoscaler (HPA) to respond to CPU demand during a bounded load test.
+- **Web application:** A customized application with a public endpoint through an OCI LoadBalancer, installed with Helm, a Kubernetes package manager.
+- **Istio service mesh:** Proxies alongside your application containers to manage traffic and report request metrics.
+- **Prometheus:** Collects and stores those metrics for Kiali and Grafana to query.
+- **Kiali:** Displays service traffic and workload health.
+- **Grafana:** Charts metrics over time so you can compare baseline traffic and manual scaling.
+
+A traffic generator sends requests while you explore the dashboards and change the number of application replicas.
 
 ### What you will learn
 
 - Customize and deploy an application with Helm.
 - Explain how Kubernetes Services keep an application reachable as pods change.
-- Explore service traffic in Kiali and compare Grafana readings during manual scaling.
-- Scale replicas manually without changing worker count or Service IP.
+- Follow service traffic in Kiali and interpret request rate, success rate, and latency in Grafana.
+- Scale application replicas from two to four and back without changing worker count or Service IP.
 - Distinguish readiness from liveness and investigate health warnings.
-- Optionally, observe CPU-based autoscaling or replace one pod and watch Kubernetes restore the desired count.
+
+### Optional extensions
+
+If time permits after the core exercises, use the Horizontal Pod Autoscaler (HPA) to adjust replicas from CPU demand, or replace one pod and observe Kubernetes restore the desired count. Neither extension is required to complete the lab; save them for a follow-up session if needed.
 
 ### Before you begin
 
-Have these ready before the hands-on portion:
+Launch the lab at the beginning of the lecture so Luna can create your cluster. No other preparation steps are required during the lecture.
 
-- Access to your assigned Luna desktop and lab repository or prepared checkout.
-- A Luna session started at the beginning of the lecture so its cluster can provision.
-- A Bash terminal with OCI CLI, kubectl, Helm, Git, and curl installed; the instructor prepares these tools.
-- Basic familiarity with terminal commands and editing a YAML file.
+During hands-on step 1, you'll download the repository, create the kubeconfig for your own cluster, check readiness, and download the Helm charts. Run commands in a Bash terminal on the Luna desktop, which has the required tools installed.
 
-**Lab duration:** 60 minutes for the core exercises and debrief. Complete the introductory lecture and cluster provisioning before the lab timer starts. Optional extensions need additional time or an early finish; they are not required for completion.
+You should be comfortable copying terminal commands and editing a YAML value. No application coding or container-image build is required.
 
-In hands-on step 1, clone the repository, obtain your kubeconfig, run preflight, and download/check the chart archives.
+**Lab duration:** 90 minutes total: a 30-minute lecture while the cluster provisions, followed by 60 minutes of core exercises and debrief. Follow the time guidance in Lab Steps before starting an optional extension.
 
-**Note:** Use only your assigned training cluster. No manual infrastructure cleanup is required from students; Luna starts automated cleanup when the session ends or expires.
+**Cleanup:** Follow the Finish the lab instructions. Leave the application and Helm releases installed; Luna starts automated cleanup when the session ends or expires.

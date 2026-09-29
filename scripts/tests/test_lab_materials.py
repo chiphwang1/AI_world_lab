@@ -216,6 +216,28 @@ class LabMaterials(unittest.TestCase):
         self.assertIn("provisional", schedule)
         self.assertIn("beginner pilot", schedule)
 
+    def test_luna_overview_matches_core_and_preparation_scope(self):
+        instructor = (ROOT / "docs/instructor-guide.md").read_text()
+        overview = instructor.split("## Suggested Luna description", 1)[1]
+        self.assertIn("OKE Bootcamp: Deploy, Monitor, and Scale an Application", overview)
+        self.assertIn("check both Overview and Lab Steps", overview)
+        core = overview.split("### What you will learn", 1)[1].split("### Optional extensions", 1)[0]
+        self.assertIn("from two to four and back", core)
+        self.assertNotIn("autoscaling", core.lower())
+        self.assertNotIn("HPA", core)
+        self.assertIn("Neither extension is required", overview)
+        preparation = overview.split("### Before you begin", 1)[1]
+        for detail in ("Launch the lab at the beginning of the lecture",
+                       "No other preparation steps are required during the lecture",
+                       "During hands-on step 1", "create the kubeconfig for your own cluster",
+                       "90 minutes total", "30-minute lecture", "60 minutes of core exercises"):
+            with self.subTest(detail=detail):
+                self.assertIn(detail, preparation)
+        for stale in ("provided by the instructor", "assigned cluster context",
+                      "prepared checkout", "before the lab timer starts"):
+            with self.subTest(stale=stale):
+                self.assertNotIn(stale, overview)
+
     def test_dashboard_guidance_explains_results(self):
         readme = (ROOT / "README.md").read_text()
         dashboards = readme.split("## 4.", 1)[1].split("## 5.", 1)[0]
