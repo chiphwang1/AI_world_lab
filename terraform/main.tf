@@ -14,8 +14,8 @@ module "oke" {
   cluster_name                      = var.cluster_name
   kubernetes_version                = var.kubernetes_version
   cluster_type                      = "enhanced"
-  control_plane_is_public           = true
-  assign_public_ip_to_control_plane = true
+  control_plane_is_public           = var.control_plane_is_public
+  assign_public_ip_to_control_plane = var.control_plane_is_public
   control_plane_allowed_cidrs       = var.control_plane_allowed_cidrs
 
   # The HPA exercise requires the resource metrics API, independently of Prometheus.

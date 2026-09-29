@@ -30,6 +30,17 @@ class RulesTests(unittest.TestCase):
     def setUpClass(cls):
         cls.config = yaml.safe_load((ROOT / ".gitlab-ci.yml").read_text())
 
+    def test_gitlab_defaults_to_private_api_without_changing_job_gates(self):
+        variables = self.config[".oci_terraform"]["variables"]
+        self.assertEqual(variables["TF_VAR_control_plane_is_public"], "false")
+        for job in ("terraform:plan", "terraform:apply", "terraform:destroy"):
+            self.assertEqual(self.config[job]["extends"], ".oci_terraform")
+        main = (ROOT / "terraform/main.tf").read_text()
+        for setting in ("control_plane_is_public", "assign_public_ip_to_control_plane"):
+            self.assertRegex(main, rf"{setting}\s*=\s*var\.control_plane_is_public")
+        outputs = (ROOT / "terraform/outputs.tf").read_text()
+        self.assertIn('${var.control_plane_is_public ? "PUBLIC_ENDPOINT" : "PRIVATE_ENDPOINT"}', outputs)
+
     def matched_rule(self, job, variables):
         rules = self.config[job].get("rules", self.config[".oci_terraform"]["rules"])
         for rule in rules:
@@ -82,6 +93,9 @@ if tool == "terraform":
 elif tool == "oci" and args[:3] == ["ce", "cluster", "list"]:
     if os.environ.get("FAIL_AT") == "oci-list": sys.exit(1)
     print(os.environ["OCI_JSON"])
+elif tool == "oci" and args[:3] == ["ce", "cluster", "get"]:
+    if os.environ.get("FAIL_AT") == "oci-get": sys.exit(1)
+    print(os.environ["CLUSTER_JSON"])
 elif tool == "oci":
     assert os.environ["OCI_CLI_AUTH"] == "api_key"
     assert os.environ["OCI_CLI_KEY_FILE"] == "/dummy/key"
@@ -109,6 +123,10 @@ class CleanupTests(unittest.TestCase):
             "CALL_LOG": str(self.log),
             "STATE_JSON": json.dumps(state_for()),
             "OCI_JSON": json.dumps({"data": [{"id": "session-cluster", "lifecycle-state": "ACTIVE"}]}),
+            "CLUSTER_JSON": json.dumps({"data": {
+                "id": "session-cluster", "compartment-id": "session-compartment",
+                "endpoint-config": {"is-public-ip-enabled": False},
+            }}),
             "SERVICES_JSON": json.dumps({"items": [
                 {"metadata": {"namespace": "oke-lab", "name": "hello-oke"}, "spec": {"type": "LoadBalancer"}},
                 {"metadata": {"namespace": "learner", "name": "custom-lb"}, "spec": {"type": "LoadBalancer"}},
@@ -136,7 +154,42 @@ class CleanupTests(unittest.TestCase):
             self.assertIn("--wait=true", call)
             self.assertIn("--timeout=600s", call)
         create = next(call for call in calls if "create-kubeconfig" in call)
+        self.assertEqual(create[create.index("--kube-endpoint") + 1], "PRIVATE_ENDPOINT")
         self.assertFalse(Path(create[create.index("--file") + 1]).exists())
+
+    def test_existing_public_cluster_uses_its_actual_endpoint(self):
+        cluster = json.loads(self.env["CLUSTER_JSON"])
+        cluster["data"]["endpoint-config"]["is-public-ip-enabled"] = True
+        self.env["CLUSTER_JSON"] = json.dumps(cluster)
+        self.env["TF_VAR_control_plane_is_public"] = "false"
+        result, calls = self.run_cleanup()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        create = next(call for call in calls if "create-kubeconfig" in call)
+        self.assertEqual(create[create.index("--kube-endpoint") + 1], "PUBLIC_ENDPOINT")
+
+    def test_unknown_or_mismatched_endpoint_metadata_blocks_cleanup(self):
+        original = self.env["CLUSTER_JSON"]
+        for change in ({"id": "another-cluster"},
+                       {"compartment-id": "another-compartment"},
+                       {"endpoint-config": None},
+                       {"endpoint-config": {}},
+                       {"endpoint-config": {"is-public-ip-enabled": "false"}}):
+            with self.subTest(change=change):
+                self.log.write_text("")
+                cluster = json.loads(original)
+                cluster["data"].update(change)
+                self.env["CLUSTER_JSON"] = json.dumps(cluster)
+                result, calls = self.run_cleanup()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(any("create-kubeconfig" in call for call in calls))
+                self.assertNotIn("kubectl", [call[0] for call in calls])
+
+    def test_private_api_unreachable_stops_before_deletion(self):
+        self.env["FAIL_AT"] = "kubectl-get"
+        result, calls = self.run_cleanup()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("verify runner network access", result.stderr)
+        self.assertFalse(any("delete" in call for call in calls))
 
     def test_empty_state_is_a_successful_noop(self):
         self.env["STATE_JSON"] = "{}"
@@ -168,13 +221,13 @@ class CleanupTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
 
     def test_api_errors_and_stuck_finalizers_fail_closed(self):
-        for failure in ("oci-list", "kubectl-get", "kubectl-delete"):
+        for failure in ("oci-list", "oci-get", "kubectl-get", "kubectl-delete"):
             with self.subTest(failure=failure):
                 self.log.write_text("")
                 self.env["FAIL_AT"] = failure
                 result, calls = self.run_cleanup()
                 self.assertNotEqual(result.returncode, 0)
-                if failure == "oci-list":
+                if failure in ("oci-list", "oci-get"):
                     self.assertNotIn("kubectl", [call[0] for call in calls])
 
     def test_multiple_clusters_are_rejected(self):

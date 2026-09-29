@@ -28,18 +28,26 @@ if [[ $cluster_status == ABSENT || $cluster_status == DELETED ]]; then
   exit 0
 fi
 
+# Inspect the actual cluster, not today's CI default: older sessions may have
+# public endpoints. Refuse unknown metadata rather than guessing an endpoint.
+kube_endpoint=$(oci ce cluster get --cluster-id "$cluster_id" --region "$TF_VAR_region" --output json |
+  python3 "$script_dir/cleanup-target.py" endpoint "$cluster_id")
+
 cleanup_tmp=$(mktemp -d)
 trap 'rm -rf -- "$cleanup_tmp"' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 export KUBECONFIG="$cleanup_tmp/kubeconfig"
 oci ce cluster create-kubeconfig --cluster-id "$cluster_id" --region "$TF_VAR_region" \
-  --file "$KUBECONFIG" --token-version 2.0.0 --kube-endpoint PUBLIC_ENDPOINT >/dev/null
+  --file "$KUBECONFIG" --token-version 2.0.0 --kube-endpoint "$kube_endpoint" >/dev/null
 
 # The session owns this cluster. Include learner-created LoadBalancer Services,
 # whose OCI load balancers are not resources in this Terraform state.
-services=$(kubectl --request-timeout=30s get services --all-namespaces -o json |
-  python3 "$script_dir/cleanup-target.py" services)
+if ! services=$(kubectl --request-timeout=30s get services --all-namespaces -o json |
+  python3 "$script_dir/cleanup-target.py" services); then
+  printf 'Cannot list Services through %s; verify runner network access and credentials before retrying cleanup.\n' "$kube_endpoint" >&2
+  exit 1
+fi
 while IFS=$'\t' read -r namespace service; do
   [[ -n $namespace && -n $service ]] || continue
   kubectl --request-timeout=30s -n "$namespace" delete service "$service" \

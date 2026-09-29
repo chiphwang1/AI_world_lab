@@ -17,9 +17,19 @@ Use a GitLab Runner with outbound access to:
 - `container-registry.oracle.com` and Oracle Linux package repositories, for the base image and packages.
 - `releases.hashicorp.com`, `dl.k8s.io`, GitHub release downloads (including redirect hosts), and PyPI/package download hosts, for the pinned tools and dependencies.
 - OCI APIs in the selected region, for Terraform and cleanup.
-- The OKE public Kubernetes API endpoint, for Service and application cleanup.
+- The OKE private Kubernetes API endpoint on TCP 6443, for Service and application cleanup.
 
 The runner does not need inbound internet access. Do not use a runner connected to a production network for this lab.
+
+### Private Kubernetes API access
+
+GitLab infrastructure jobs default `TF_VAR_control_plane_is_public` to `false`. This sets both OKE module inputs, `control_plane_is_public` and `assign_public_ip_to_control_plane`, to `false`: the API endpoint has a private IP in a private subnet. The generated `kubeconfig_command` selects `PRIVATE_ENDPOINT`. The application's public LoadBalancer is unchanged. Standalone Terraform retains its public-endpoint default for existing local rehearsals.
+
+Before launching, the platform administrator must provide a private network path from **both the Luna desktop and the cleanup runner** to the new lab VCN, with return routes and TCP 6443 allowed. Set `TF_VAR_control_plane_allowed_cidrs` to a JSON list of the actual routed client source CIDRs. An allowlist alone does not create connectivity. This stack creates a separate VCN for each session; it does not configure peering, VPN, a bastion, or runner/desktop placement. A VPN that reaches GitLab does not by itself prove access to the lab VCN. See [Oracle's private cluster access requirements](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm).
+
+Check for project/group or Luna launch variables overriding `TF_VAR_control_plane_is_public`, and review the plan for `endpoint_config.is_public_ip_enabled = false`. Use a new Luna launch for this configuration; retrying an old pipeline uses its old commit. Do not apply it to an existing cluster without reviewing potential subnet/cluster replacements.
+
+Cleanup reads the actual cluster's endpoint configuration, so it supports both new private clusters and older public clusters. If the runner cannot reach the Kubernetes API, cleanup stops before Terraform destroy; restore connectivity and retry cleanup while the session credentials remain valid. A successful Terraform apply does not verify desktop or cleanup-runner Kubernetes access. Rehearse both before teaching.
 
 ## Toolchain test status
 
@@ -50,7 +60,7 @@ When `LUNA_DEPLOYMENT=1`, the bootstrap requires Luna's `TF_VAR_private_key` and
 
 The documented example is from 2021. The session lifecycle follows the Luna guidance provided for this project: Luna starts the selected branch at session launch, records that pipeline, then starts every manual job in that same pipeline at session termination/expiry with the session variables restored (except `TF_VAR_tims_idcs_access_token`). These platform callbacks still need an end-to-end test. The pipeline does not use that excluded token. Other Luna tokens/passwords are not printed or added to artifacts.
 
-Verify the session identity can create OKE, networking, and workers, read tenancy region subscriptions, list clusters in the session compartment, generate kubeconfig/tokens, and list/delete Kubernetes Services and the lab manifests. When `create_policies=true`, it must also create the module's IAM resources. If Luna restricts IAM creation, administrators must provision the required IAM resources before setting `TF_VAR_create_policies=false`.
+Verify the session identity can create OKE, networking, and workers, read tenancy region subscriptions, list clusters in the session compartment, read cluster details, generate kubeconfig/tokens, and list/delete Kubernetes Services and the lab manifests. When `create_policies=true`, it must also create the module's IAM resources. If Luna restricts IAM creation, administrators must provision the required IAM resources before setting `TF_VAR_create_policies=false`.
 
 At launch, validation is followed by automatic plan and apply. The desktop may become available before the cluster is ready. `terraform:destroy` is optional/manual (`allow_failure: true`), so its waiting state does not block provisioning completion. Luna starts it when the session ends. Never add manual provisioning jobs to a Luna pipeline: the platform would also start them during teardown. Cleanup failures show as warnings because the job is optional; monitor the job itself and retry failures before credentials expire.
 

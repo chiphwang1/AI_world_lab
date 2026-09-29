@@ -38,9 +38,15 @@ variable "vcn_cidr" {
   description = "CIDR for the new lab VCN."
   default     = "10.0.0.0/16"
 }
+variable "control_plane_is_public" {
+  type        = bool
+  description = "Use a public Kubernetes API endpoint. GitLab defaults to false; private access requires a network path into the lab VCN."
+  default     = true
+  nullable    = false
+}
 variable "control_plane_allowed_cidrs" {
   type        = list(string)
-  description = "Client IPv4 CIDRs allowed to reach the public Kubernetes API. Include the operator, CI runner, and Luna desktop egress addresses. Empty denies external access."
+  description = "Client IPv4 CIDRs allowed to reach the Kubernetes API. For private endpoints, use the routed source CIDRs of the operator, CI runner, and Luna desktop; for public endpoints, use their public egress CIDRs. Empty adds no client access rules."
   default     = []
 
   validation {

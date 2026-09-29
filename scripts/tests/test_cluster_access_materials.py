@@ -9,6 +9,14 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class ClusterAccessMaterials(unittest.TestCase):
+    def test_private_api_access_guide_matches_gitlab_default(self):
+        access = (ROOT / "docs/cluster-access.md").read_text()
+        self.assertIn("--kube-endpoint PRIVATE_ENDPOINT", access)
+        self.assertIn("private network path", access)
+        ci = (ROOT / "docs/gitlab-ci.md").read_text()
+        for requirement in ("TCP 6443", "cleanup runner", "TF_VAR_control_plane_allowed_cidrs"):
+            self.assertIn(requirement, ci)
+
     def test_login_precedes_cluster_and_kubeconfig_steps(self):
         readme = (ROOT / "README.md").read_text()
         headings = ["### Find your lab login and compartment",

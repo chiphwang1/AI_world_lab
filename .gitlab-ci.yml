@@ -67,6 +67,8 @@ terraform:bootstrap-test:
     - bash scripts/ci-tools.sh terraform
   variables:
     OKE_ENVIRONMENT: oke-lab-test
+    # The Luna desktop and cleanup runner need a private path to the lab VCN.
+    TF_VAR_control_plane_is_public: "false"
   rules:
     - if: '$LUNA_DEPLOYMENT == "1" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success

@@ -12,7 +12,7 @@ In the Console, select the session's region. Open the navigation menu, then **De
 
 Use the cluster OCID and region from your cluster's Console access command. An OCID is OCI's resource identifier. Use the desktop OCI profile configured for your Luna session in `~/.oci/config`; ask for help if you cannot identify it. Use `DEFAULT` only if that is your session's profile. Do not generate new API keys for this exercise.
 
-Replace the three placeholders below before running. This example uses the lab's API-key authentication and public Kubernetes endpoint:
+Replace the three placeholders below before running. This example uses the lab's API-key authentication and the private Kubernetes endpoint used by new GitLab/Luna deployments. The Luna desktop must have a platform-provided private network path to the cluster; generating a kubeconfig does not create that path. For an older public-endpoint rehearsal, use the endpoint shown in its Console access command instead.
 
 ```bash
 export LAB_REGION='<your-session-region>'
@@ -23,7 +23,7 @@ umask 077
 mkdir -p "$HOME/.kube"
 oci ce cluster create-kubeconfig --cluster-id "$LAB_CLUSTER_OCID" \
   --region "$LAB_REGION" --file "$KUBECONFIG" \
-  --token-version 2.0.0 --kube-endpoint PUBLIC_ENDPOINT \
+  --token-version 2.0.0 --kube-endpoint PRIVATE_ENDPOINT \
   --profile "$LAB_OCI_PROFILE" --auth api_key --with-auth-context &&
 chmod 600 "$KUBECONFIG"
 ```
@@ -51,7 +51,7 @@ export OCI_CLI_AUTH=api_key
 
 Adjust the source path if the browser used another download directory. If prompted to overwrite a file, answer **no** and ask the instructor which file to retain. File transfers do not preserve permissions. Set the profile/auth variables in **every new desktop terminal** for this alternative, plus the instructor's `OCI_CLI_CONFIG_FILE` if needed. These use the lab's existing desktop credentials; never copy Cloud Shell's `/etc/oci` credentials. See [Oracle's Cloud Shell download and authentication instructions](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/devcloudshellgettingstarted.htm).
 
-A downloaded kubeconfig does not establish network access or grant permissions. A private endpoint requires an instructor-provided private network path; even a public endpoint may restrict source addresses. Do not change endpoint/firewall settings or create credentials to bypass a connection failure.
+A downloaded kubeconfig does not establish network access or grant permissions. A private endpoint requires a platform-provided private network path; even a public endpoint may restrict source addresses. Do not change endpoint/firewall settings or create credentials to bypass a connection failure.
 
 ## Verify the selected file and context
 

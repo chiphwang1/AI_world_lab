@@ -41,6 +41,18 @@ def cluster_status(response, cluster_id):
     return matches[0]["lifecycle-state"] if matches else "ABSENT"
 
 
+def cluster_endpoint(response, cluster_id, compartment):
+    cluster = response["data"]
+    if cluster["id"] != cluster_id or cluster["compartment-id"] != compartment:
+        raise ValueError("Endpoint lookup does not match the cleanup target.")
+    public = cluster["endpoint-config"]["is-public-ip-enabled"]
+    if public is True:
+        return "PUBLIC_ENDPOINT"
+    if public is False:
+        return "PRIVATE_ENDPOINT"
+    raise ValueError("Cluster endpoint visibility is unknown.")
+
+
 def load_balancers(response):
     return "\n".join(
         f'{item["metadata"]["namespace"]}\t{item["metadata"]["name"]}'
@@ -57,6 +69,8 @@ if __name__ == "__main__":
             result = cluster_target(payload, os.environ["TF_VAR_compartment_ocid"])
         elif mode == "status":
             result = cluster_status(payload, sys.argv[2])
+        elif mode == "endpoint":
+            result = cluster_endpoint(payload, sys.argv[2], os.environ["TF_VAR_compartment_ocid"])
         elif mode == "services":
             result = load_balancers(payload)
         else:
