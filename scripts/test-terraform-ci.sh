@@ -41,9 +41,26 @@ terraform() {
     printf 'mock plan\n' > terraform/lab.tfplan
   elif [[ $2 == show ]]; then
     printf '%s\n' "$TEST_STATE_JSON"
+  elif [[ $2 == output && $4 == vcn_id ]]; then
+    printf 'test-vcn\n'
   fi
 }
 export -f terraform
+
+# Test the apply hook's scope/auth without invoking any real OCI command.
+python3() {
+  if [[ ${1:-} == */ensure-subnet-security.py ]]; then
+    [[ $* == *'--vcn-id test-vcn'* && $* == *'--apply'* ]] || return 90
+    [[ $* == *"--compartment-id $TF_VAR_compartment_ocid"* ]] || return 91
+    [[ $* == *"--region $TF_VAR_region"* ]] || return 92
+    [[ $OCI_CLI_AUTH == api_key && $OCI_CLI_USER == "$TF_VAR_user_ocid" ]] || return 93
+    [[ $OCI_CLI_KEY_FILE == "$TF_VAR_private_key_path" ]] || return 94
+    printf 'subnet-security-hook\n' >> "$TEST_CALLS"
+    return 0
+  fi
+  command python3 "$@"
+}
+export -f python3
 
 curl() {
   local address=${!#}
@@ -96,6 +113,7 @@ grep -q 'terraform/state/luna-oke-' "$TEST_CALLS"
 cp terraform/lab.target original.target
 success apply
 grep -q 'apply -input=false lab.tfplan' "$TEST_CALLS"
+grep -q 'subnet-security-hook' "$TEST_CALLS"
 # State selection must survive a new pipeline for the same lab allocation.
 export CI_PIPELINE_ID=456
 success plan

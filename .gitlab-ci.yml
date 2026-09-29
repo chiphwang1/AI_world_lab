@@ -94,6 +94,9 @@ terraform:plan:
 terraform:apply:
   extends: .oci_terraform
   stage: deploy
+  before_script:
+    - bash scripts/ci-tools.sh terraform
+    - bash scripts/ci-tools.sh oci
   dependencies:
     - terraform:plan
   script:

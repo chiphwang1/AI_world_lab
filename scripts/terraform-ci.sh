@@ -119,7 +119,17 @@ case "$action" in
     terraform -chdir=terraform plan -input=false -out=lab.tfplan
     plan_target > terraform/lab.target
     ;;
-  apply) terraform -chdir=terraform apply -input=false lab.tfplan ;;
+  apply)
+    terraform -chdir=terraform apply -input=false lab.tfplan
+    # Match the reviewed provider identity; never fall back to a runner profile.
+    export OCI_CLI_AUTH=api_key OCI_CLI_USER="$TF_VAR_user_ocid"
+    export OCI_CLI_FINGERPRINT="$TF_VAR_fingerprint" OCI_CLI_TENANCY="$TF_VAR_tenancy_ocid"
+    export OCI_CLI_KEY_FILE="$TF_VAR_private_key_path"
+    unset OCI_CLI_KEY_CONTENT OCI_CLI_SECURITY_TOKEN_FILE
+    lab_vcn_id=$(terraform -chdir=terraform output -raw vcn_id)
+    python3 "$script_dir/ensure-subnet-security.py" --vcn-id "$lab_vcn_id" \
+      --compartment-id "$TF_VAR_compartment_ocid" --region "$TF_VAR_region" --apply
+    ;;
   destroy)
     bash "$script_dir/cleanup-kubernetes.sh"
     terraform -chdir=terraform destroy -input=false -auto-approve
