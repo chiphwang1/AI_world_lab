@@ -30,14 +30,19 @@ class RulesTests(unittest.TestCase):
     def setUpClass(cls):
         cls.config = yaml.safe_load((ROOT / ".gitlab-ci.yml").read_text())
 
-    def test_gitlab_defaults_to_private_api_without_changing_job_gates(self):
+    def test_gitlab_defaults_to_public_lab_api_without_changing_job_gates(self):
         variables = self.config[".oci_terraform"]["variables"]
-        self.assertEqual(variables["TF_VAR_control_plane_is_public"], "false")
+        self.assertEqual(variables["TF_VAR_control_plane_is_public"], "true")
+        self.assertEqual(json.loads(variables["TF_VAR_control_plane_allowed_cidrs"]), ["0.0.0.0/0"])
         for job in ("terraform:plan", "terraform:apply", "terraform:destroy"):
             self.assertEqual(self.config[job]["extends"], ".oci_terraform")
         main = (ROOT / "terraform/main.tf").read_text()
         for setting in ("control_plane_is_public", "assign_public_ip_to_control_plane"):
             self.assertRegex(main, rf"{setting}\s*=\s*var\.control_plane_is_public")
+        self.assertRegex(main, r"control_plane_allowed_cidrs\s*=\s*var\.control_plane_allowed_cidrs")
+        inputs = (ROOT / "terraform/variables.tf").read_text()
+        self.assertRegex(inputs, r'variable "control_plane_is_public"\s*\{[^}]*default\s*=\s*true')
+        self.assertRegex(inputs, r'variable "control_plane_allowed_cidrs"\s*\{[^}]*default\s*=\s*\["0\.0\.0\.0/0"\]')
         outputs = (ROOT / "terraform/outputs.tf").read_text()
         self.assertIn('${var.control_plane_is_public ? "PUBLIC_ENDPOINT" : "PRIVATE_ENDPOINT"}', outputs)
 

@@ -12,7 +12,7 @@ In the Console, select the session's region. Open the navigation menu, then **De
 
 Use the cluster OCID and region from your cluster's Console access command. An OCID is OCI's resource identifier. Use the desktop OCI profile configured for your Luna session in `~/.oci/config`; ask for help if you cannot identify it. Use `DEFAULT` only if that is your session's profile. Do not generate new API keys for this exercise.
 
-Replace the three placeholders below before running. This example uses the lab's API-key authentication and the private Kubernetes endpoint used by new GitLab/Luna deployments. The Luna desktop must have a platform-provided private network path to the cluster; generating a kubeconfig does not create that path. For an older public-endpoint rehearsal, use the endpoint shown in its Console access command instead.
+Replace the three placeholders below before running. This example uses the lab's API-key authentication and the public Kubernetes endpoint used by new GitLab/Luna deployments. The Luna desktop needs outbound TCP 6443 access to that endpoint. For an existing private-only cluster, use `PRIVATE_ENDPOINT` and its configured private network path; generating a kubeconfig does not change the cluster's endpoint.
 
 ```bash
 export LAB_REGION='<your-session-region>'
@@ -23,7 +23,7 @@ umask 077
 mkdir -p "$HOME/.kube"
 oci ce cluster create-kubeconfig --cluster-id "$LAB_CLUSTER_OCID" \
   --region "$LAB_REGION" --file "$HOME/.kube/config" \
-  --token-version 2.0.0 --kube-endpoint PRIVATE_ENDPOINT \
+  --token-version 2.0.0 --kube-endpoint PUBLIC_ENDPOINT \
   --profile "$LAB_OCI_PROFILE" --auth api_key --with-auth-context &&
 chmod 600 "$HOME/.kube/config"
 ```

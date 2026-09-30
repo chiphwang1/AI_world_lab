@@ -15,8 +15,8 @@ node_ocpus     = 1
 node_memory_gb = 16
 node_count     = 2
 
-# Local rehearsal default; GitLab defaults to a private API endpoint instead.
+# Disposable lab default, also used by GitLab/Luna. Authentication is required.
 control_plane_is_public = true
-# Public API: replace with actual operator/runner/desktop public egress CIDRs.
-# Private API: use their routed private source CIDRs and provision connectivity.
-control_plane_allowed_cidrs = ["192.0.2.1/32"]
+# Exposes only TCP 6443 to all IPv4 sources. Restrict outside this temporary lab.
+# For a private API, set false above and use routed private client CIDRs instead.
+control_plane_allowed_cidrs = ["0.0.0.0/0"]
