@@ -22,7 +22,7 @@ If time permits, use the **Horizontal Pod Autoscaler (HPA)** to adjust replicas 
 
 Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private.
 
-Materials revision: `lab-2026-09-30.2`. Your checkout and Luna instructions must show this same revision.
+Materials revision: `lab-2026-09-30.3`. Your checkout and Luna instructions must show this same revision.
 
 Record checkpoints in the [completion sheet (PDF)](docs/completion-sheet.pdf) or [Markdown version](docs/completion-sheet.md). You can save or print the PDF.
 
@@ -41,7 +41,7 @@ The diagram includes the optional HPA extension, not live health. Follow the req
 | 48–55 | 5. Scale manually | Change app replicas from two to four and back to two |
 | 55–60 | 8. Debrief and buffer | Explain your observations and absorb delays |
 
-Steps 6 and 7 are optional. Allow at least 15 minutes for HPA setup, load, and scale-in, or five minutes for pod recovery, before the final debrief. During this hour, start HPA only if the core is complete by minute 40, or recovery by minute 50; otherwise save them for a follow-up session. Do not rush the core work to fit an extension. Direct Prometheus queries, controlled outages, and OCI alarms are outside this hour.
+Steps 6 and 7 are optional early-finisher exercises. Choose pod recovery (step 7) for a shorter, five-minute extension, or HPA (step 6) with at least 15 minutes for setup, load, and scale-in before debrief. Start HPA only if the core is complete by minute 40, or recovery by minute 50; otherwise save them for a follow-up session. Protect time for dashboard observations and debrief. Direct Prometheus queries, controlled outages, and OCI alarms are outside this hour.
 
 These are provisional planning targets, including setup, reading, commands, waits, and interpretation; a beginner pilot is still needed to validate them. Downloads and cluster readiness vary; ask for help at blocked checkpoints.
 
@@ -56,7 +56,7 @@ Use each code block's **Copy** button, then **Edit → Paste** in the Luna termi
 In a **Bash terminal** on your Luna desktop, download the lab repository. Keep this window open as **terminal 1**:
 
 ```bash
-git clone --branch lab-2026-09-30.2 --single-branch \
+git clone --branch lab-2026-09-30.3 --single-branch \
   https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&
   cd "$HOME/oke-bootcamp"
 ```
@@ -82,7 +82,7 @@ Your **kubeconfig** tells kubectl which cluster to connect to and how to authent
 1. Select your **region** in the OCI Console. Open the upper-left navigation menu → **Developer Services → Containers & Artifacts → Kubernetes Clusters (OKE)**. See [Oracle's navigation instructions](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/list-clusters.htm).
 2. Open the **Compartment** filter. Expand the compartment hierarchy if needed and select the exact **Compartment Name** shown on your Luna Lab page. Do not choose a compartment just because its name begins with `luna`, and do not use the tenancy root.
 3. Open the cluster Luna created for you. If it is still provisioning, wait until it is ready.
-4. On your cluster's details page, open **Actions → Access cluster → Local Access**. “Local” means the terminal on your Luna desktop, not your personal laptop.
+4. On your cluster's details page, select **Access Cluster** (under **Actions** if necessary), then **Local Access**. “Local” means the terminal on your Luna desktop, not your personal laptop.
 5. In **terminal 1**, prepare the kubeconfig directory:
 
    ```bash
@@ -143,24 +143,20 @@ bash scripts/prepare-charts.sh --check
 
 Expect five `PASS Prepared chart` lines from each successful command. Matching downloads are reused if you rerun it. On failure, follow the message or ask for help. The Git tag pins lab files, and `helm/versions.env` pins upstream charts.
 
-Continue after preflight and all five chart checks pass. Keep terminal 1 open for later commands.
-
 ### Confirm your prepared connection
 
-In terminal 1, confirm your directory, context, workers, and resource metrics:
+After preflight and all five chart checks pass, inspect the workers and their resource usage in terminal 1:
 
 ```bash
-pwd
-kubectl config current-context
 kubectl get nodes
 kubectl top nodes
 ```
 
-Expect a path ending in `oke-bootcamp`, your cluster's context, two `Ready` workers, and numeric CPU/memory readings. Ask for help if they differ.
+Expect two `Ready` workers and numeric CPU/memory readings. Keep terminal 1 open for later commands.
 
-**Checkpoint:** confirm those results. Which file selects your Kubernetes connection, and which component supplies CPU metrics?
+**Checkpoint:** identify the two workers and their CPU usage. Which file selects your Kubernetes connection, and which component supplies CPU metrics?
 
-kubectl and Helm use `~/.kube/config` by default; its selected context identifies the cluster and user. `unset KUBECONFIG` clears any previous override so the default file is used. Metrics Server supplies the resource metrics used by `kubectl top` and this lab's HPA; Prometheus supplies the dashboard metrics. See [kubectl top node](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_top/kubectl_top_node/).
+The selected context in `~/.kube/config` identifies the cluster and user. Metrics Server supplies the resource metrics used by `kubectl top` and this lab's HPA; Prometheus supplies the dashboard metrics. See [kubectl top node](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_top/kubectl_top_node/).
 
 ## 2. Install Istio, Prometheus, Kiali, and Grafana — 18 minutes
 
@@ -387,9 +383,11 @@ The **OKE Lab — Traffic & Scaling** dashboard opens with a 30-minute range and
 - **Istiod scrape health:** `1` means Prometheus can scrape Istiod; this is not a complete control-plane health check.
 - **Traffic, latency, response codes, and proxy-count graphs:** history to compare during manual scaling and, optionally, the HPA load burst.
 
+To read p95, scroll to **Request latency** and hover over a recent point. Record the tooltip's **p95** value and timestamp in your notes, not p50.
+
 **Proxy count is not pod readiness**; scrape discovery can lag. Confirm two Ready pods with `kubectl -n oke-lab get pods -l app=hello-oke`. HPA remains disabled throughout the core lab. Empty panels mean `no data`, not zero traffic or health ([troubleshooting](docs/troubleshooting.md)).
 
-**Checkpoint:** record baseline request rate, success rate, p95 latency, and proxy count in your [completion sheet (PDF)](docs/completion-sheet.pdf). Explain whether the request rate roughly matches the generator's interval. Trace the monitoring path from the proxies to Kiali and Grafana on the diagram. Record one dashboard metric and its source as evidence for question 2.
+**Checkpoint:** record the baseline row in your [completion sheet (PDF)](docs/completion-sheet.pdf). Does the request rate match the generator's interval? Trace the monitoring path from the proxies to Kiali and Grafana, then explain one reading and its source.
 
 Keep both dashboards open, using the same Grafana time range and p95 statistic throughout scaling. More replicas do not generate more demand: baseline traffic continues about every two seconds. Observe proxy count alongside actual Ready pods. The [monitoring guide](docs/monitoring.md) covers queries and optional exercises.
 
@@ -406,6 +404,7 @@ Before scaling, predict what will happen to the app pod count, worker count, and
 ```bash
 helm upgrade hello-oke ./charts/oke-mesh-app --namespace oke-lab \
   --reuse-values --set replicaCount=4 --wait --timeout 10m
+kubectl -n oke-lab rollout status deployment/hello-oke --timeout=300s
 kubectl -n oke-lab get pods -l app=hello-oke -o wide
 kubectl -n oke-lab get deployment hello-oke
 kubectl get nodes
@@ -413,7 +412,9 @@ kubectl -n oke-lab get svc hello-oke
 for request in {1..10}; do curl --fail --max-time 10 "http://${APP_IP}/"; done
 ```
 
-Compare replicas, workers, Service IP, and response pod names with your predictions. Expect four Ready app replicas, unchanged Service IP, and two workers. Use the `NODE` column in the pod list to identify where the four pods run; do not assume an even split. Record pod count, worker names, and Service IP as evidence for question 3, and add dashboard readings to the manual-scaling row. A short request sequence need not reach each pod equally; your ten test requests can briefly raise the observed request rate above baseline.
+Wait for `successfully rolled out` before checking the counts. Helm can report `deployed` before every desired replica is ready; the rollout check waits for the Deployment to finish.
+
+Compare replicas, workers, Service IP, and response pod names with your predictions. Expect four Ready app replicas, unchanged Service IP, and two workers. Use the `NODE` column to locate the app pods; do not assume an even split. Record the manual-scaling observations on your completion sheet. A short request sequence need not reach each pod equally; your ten test requests can briefly raise the observed request rate above baseline.
 
 **Readiness and liveness:** a pod can be `Running` while its app or Istio proxy is still initializing. In this lab, `2/2` means both are ready.
 
@@ -429,10 +430,13 @@ Restore the starting size, then confirm the result:
 ```bash
 helm upgrade hello-oke ./charts/oke-mesh-app --namespace oke-lab \
   --reuse-values --set replicaCount=2 --wait --timeout 10m
+kubectl -n oke-lab rollout status deployment/hello-oke --timeout=300s
 kubectl -n oke-lab get pods -l app=hello-oke
 ```
 
-**Core checkpoint:** two Ready app pods are restored, the Service IP and worker count are unchanged, and you have recorded baseline and manual-scaling observations. Fill in the restored row and questions 1–4 on the completion sheet. The core lab does not require an HPA, a load burst, or automatic scale-in. Go to **step 8** to finish, or choose an optional extension if time permits.
+Pods being removed may briefly show `Terminating`; wait for those rows to disappear before recording the restored count.
+
+**Core checkpoint:** confirm two Ready app pods, unchanged Service IP, and two workers. What changed during scaling, and why? Complete the restored row and core debrief on your completion sheet. Go to **step 8** to finish, or choose an optional extension if time permits.
 
 ## 6. Optional: CPU-based autoscaling — allow at least 15 minutes
 
@@ -484,11 +488,15 @@ The generator sends two concurrent streams to `/work` for five minutes, then ret
 ```bash
 helm upgrade hello-oke ./charts/oke-mesh-app --namespace oke-lab \
   --reuse-values --set traffic.loadEnabled=true --wait --timeout 10m
-kubectl -n oke-lab get hpa hello-oke --watch
-# Observe CPU and replica changes for several minutes; Ctrl+C stops only the watch.
 ```
 
-To inspect CPU and logs, press Ctrl+C in **terminal 1** to stop only the watch, then run:
+Watch CPU utilization and replica changes for several minutes:
+
+```bash
+kubectl -n oke-lab get hpa hello-oke --watch
+```
+
+To inspect CPU and logs, press Ctrl+C in **terminal 1** to stop only the watch, then run the checks below. If the shortcut does not reach Luna, use the [terminal interrupt fallback](https://luna.oracle.com/lab/8f468598-9993-41b8-92ce-e643f5603f9b/steps#if-ctrlc-does-not-reach-the-terminal).
 
 ```bash
 kubectl -n oke-lab top pods --containers
@@ -511,10 +519,15 @@ Explicitly reset burst mode after the test (this also stops an active burst earl
 ```bash
 helm upgrade hello-oke ./charts/oke-mesh-app --namespace oke-lab \
   --reuse-values --set traffic.loadEnabled=false --wait --timeout 10m
-kubectl -n oke-lab get hpa hello-oke --watch
-# Wait for CPU to settle and replicas to return to two, then press Ctrl+C.
-# If this takes more than three minutes, stop the watch and ask the instructor.
 ```
+
+Watch scale-in:
+
+```bash
+kubectl -n oke-lab get hpa hello-oke --watch
+```
+
+Wait for CPU to settle and replicas to return to two, then press **Ctrl+C**. If this takes more than three minutes, stop the watch and ask the instructor.
 
 Downscale stabilization is 60 seconds here (Kubernetes defaults to five minutes); metrics and reconciliation add delay. Reset the burst flag even after automatic completion: a generator restart with burst mode enabled starts another burst.
 
@@ -529,8 +542,17 @@ This extension does not require HPA. Start after step 5, only if at least five m
 ```bash
 POD_TO_REPLACE=$(kubectl -n oke-lab get pods -l app=hello-oke -o jsonpath='{.items[0].metadata.name}')
 kubectl -n oke-lab delete pod "$POD_TO_REPLACE"
+```
+
+Watch for the replacement pod's new name:
+
+```bash
 kubectl -n oke-lab get pods -l app=hello-oke --watch
-# Press Ctrl+C once a replacement pod is Ready.
+```
+
+When the replacement shows `2/2 Running`, press **Ctrl+C** to stop the watch. Then verify the rollout, HTTP response, and events:
+
+```bash
 kubectl -n oke-lab rollout status deployment/hello-oke --timeout=300s
 curl --fail --max-time 10 "http://${APP_IP}/"
 kubectl -n oke-lab get events --sort-by=.lastTimestamp
@@ -568,6 +590,12 @@ The instructions are in your computer's browser; the Luna terminal runs on a sep
 
 Do not end or relaunch the lab to fix clipboard permissions. If Chrome requests a reload, save any browser form edits and reload only the Luna page. If your organization prevents changing the permission, use the manual Clipboard box or ask the instructor.
 
+### If Ctrl+C does not reach the terminal
+
+Click inside the terminal running the watch or port-forward and press **Ctrl+C**. If it keeps running, use that Luna terminal's **Terminal → Send Signal → 2 – INT** menu. This interrupts its foreground command, like Ctrl+C; it does not remove Kubernetes resources. Select the correct terminal or tab so you do not interrupt another task.
+
+The menu fallback worked during the browser-automated rehearsal when the keyboard shortcut was not transmitted. It is only needed if your shortcut fails.
+
 ### Open cluster details by URL
 
 Use this alternative only if needed after identifying your own cluster and region. Replace both placeholders:
@@ -590,6 +618,26 @@ Correct the first `FAIL` before rerunning preflight; the script stops there with
 ### Fresh-terminal setup errors
 
 In a new terminal, use the existing checkout and required OCI settings. Run `unset KUBECONFIG` to use the default `~/.kube/config`, then verify `kubectl config current-context`. A correct saved context needs no reselection or regenerated kubeconfig.
+
+If you are replacing **terminal 1**, restore its directory and chart-version variables:
+
+```bash
+cd "$HOME/oke-bootcamp" &&
+source helm/versions.env
+unset KUBECONFIG
+kubectl config current-context
+```
+
+Stop if changing directory or loading variables fails, or the context is not your lab cluster. If you used a different checkout directory, substitute that path. Keep any required OCI authentication settings from [cluster access](docs/cluster-access.md#generate-your-kubeconfig-on-the-desktop).
+
+If the app is already deployed, also restore its public IP variable:
+
+```bash
+APP_IP=$(kubectl -n oke-lab get svc hello-oke -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+echo "$APP_IP"
+```
+
+Continue only when an IP is displayed. Terminals 2 and 3 need the connection settings, but not the chart-version or `APP_IP` variables.
 
 - `path "./charts/oke-mesh-app" not found`: the relative chart path is wrong for your current directory. Return to the repository root, where `README.md`, `charts/`, and `helm/` are located.
 - Connection refused at `localhost:8080`: usually no usable cluster configuration was selected. Follow [cluster access](docs/cluster-access.md#verify-the-selected-file-and-context); changing directories alone does not select a cluster.

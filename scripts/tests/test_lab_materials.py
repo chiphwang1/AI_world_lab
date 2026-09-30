@@ -249,6 +249,62 @@ class LabMaterials(unittest.TestCase):
         self.assertIn("Use one baseline reading and one load reading", readme)
         self.assertIn("cannot isolate autoscaling's effect on latency", readme)
 
+    def test_manual_scaling_waits_for_rollout_before_listing_pods(self):
+        readme = (ROOT / "README.md").read_text()
+        manual = readme.split("## 5. Scale manually", 1)[1].split("## 6.", 1)[0]
+        blocks = re.findall(r"```bash\n(.*?)```", manual, re.S)
+        for count in (4, 2):
+            with self.subTest(replicas=count):
+                block = next(block for block in blocks if f"replicaCount={count}" in block)
+                self.assertLess(block.index(f"replicaCount={count}"),
+                                block.index("rollout status deployment/hello-oke --timeout=300s"))
+                self.assertLess(block.index("rollout status"), block.index("get pods"))
+        self.assertIn("before every desired replica is ready", manual)
+        self.assertIn("`Terminating`", manual)
+
+    def test_interactive_watches_have_their_own_copy_blocks(self):
+        readme = (ROOT / "README.md").read_text()
+        blocks = re.findall(r"```bash\n(.*?)```", readme, re.S)
+        watches = [block for block in blocks if "--watch" in block]
+        self.assertEqual(len(watches), 3)
+        for block in watches:
+            with self.subTest(block=block):
+                self.assertEqual(len(block.strip().splitlines()), 1)
+                self.assertRegex(block.strip(), r"^kubectl -n oke-lab get .+ --watch$")
+        recovery = readme.split("## 7.", 1)[1].split("## 8.", 1)[0]
+        self.assertLess(recovery.index("press **Ctrl+C**"), recovery.index("rollout status"))
+        self.assertIn("Terminal → Send Signal → 2 – INT", readme)
+
+    def test_fresh_terminal_restores_local_variables_without_regenerating_config(self):
+        readme = (ROOT / "README.md").read_text()
+        fresh = readme.split("### Fresh-terminal setup errors", 1)[1].split("### ", 1)[0]
+        blocks = re.findall(r"```bash\n(.*?)```", fresh, re.S)
+        self.assertEqual(len(blocks), 2)
+        for command in ('cd "$HOME/oke-bootcamp"', "source helm/versions.env",
+                        "unset KUBECONFIG", "kubectl config current-context"):
+            self.assertIn(command, blocks[0])
+        self.assertIn("APP_IP=$(kubectl -n oke-lab get svc hello-oke", blocks[1])
+        self.assertIn("If the app is already deployed", fresh)
+        self.assertNotIn("create-kubeconfig", fresh)
+        self.assertNotIn("git clone", fresh)
+
+    def test_luna_rehearsal_guidance_covers_latency_quota_and_public_clone(self):
+        readme = (ROOT / "README.md").read_text()
+        self.assertIn("hover over a recent point", readme)
+        self.assertIn("tooltip's **p95** value and timestamp", readme)
+        instructor = (ROOT / "docs/instructor-guide.md").read_text()
+        for detail in ("lb-flexible-count=1", "lb-flexible-bandwidth-sum=10",
+                       "fresh-session deployment", "Verify unauthenticated access"):
+            self.assertIn(detail, instructor)
+        for name in ("docs/instructor-guide.md", "helm/README.md"):
+            text = (ROOT / name).read_text()
+            with self.subTest(file=name):
+                self.assertNotRegex(text, r"private (?:GitHub|distribution repository)")
+        for name in ("README.md", "docs/cluster-access.md"):
+            with self.subTest(file=name):
+                self.assertIn("**Access Cluster** (under **Actions** if necessary)",
+                              (ROOT / name).read_text())
+
     def test_bash_blocks_parse_and_local_links_resolve(self):
         for path in (ROOT / "README.md", *sorted((ROOT / "docs").glob("*.md")), ROOT / "helm/README.md"):
             text = path.read_text()

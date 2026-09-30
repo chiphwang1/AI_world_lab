@@ -34,15 +34,21 @@ Render and visually inspect both pages before publishing. The builder rejects un
 | 85 / lab 55 | Core work ends; record any blocked checkpoint honestly. |
 | 85–90 | Debrief using the completion sheet; absorb small delays. |
 
-HPA and pod recovery are optional and do not affect core completion. Offer HPA only after the core is complete and at least 15 minutes remain before debrief (by lab minute 40); offer recovery with five minutes remaining (by minute 50). These are early-finisher options, not additional targets for the scheduled core. Otherwise offer a follow-up session with an authorized lab environment. Do not promise that an expired Luna session remains available. Direct Prometheus queries, outages, and OCI alarms are outside this session.
+HPA and pod recovery are optional and do not affect core completion. Offer pod recovery as the shorter, five-minute extension if the core is complete by minute 50. Offer HPA only with at least 15 minutes before debrief (core complete by minute 40). These are early-finisher options, not additional targets for the scheduled core. Otherwise offer a follow-up session with an authorized lab environment. Protect dashboard observation and debrief time. Do not promise that an expired Luna session remains available. Direct Prometheus queries, outages, and OCI alarms are outside this session.
 
 ## Before class and the minute-20 check
 
 Prepare desktop tools and verify repository and chart-repository access before the workshop. Students start Luna at workshop minute 0 and do no further setup during the lecture. Students download the charts in hands-on step 1, when they also generate their kubeconfig and check readiness. See [cluster access](cluster-access.md). The revised ten-minute setup target includes downloads; it and the rest of the schedule still need a beginner pilot.
 
+### Luna load balancer quota
+
+Configure each lab session for one flexible load balancer with 10 Mbps bandwidth: `lb-flexible-count=1` and `lb-flexible-bandwidth-sum=10`. The app Service requests this load balancer; Kiali, Grafana, and Prometheus remain internal and need no additional load balancers.
+
+In the September 30 Luna rehearsal, the app Service failed with `QuotaExceeded` for `lb-flexible-bandwidth-sum`. Updating Luna's configuration did not change the active session's quota. A fresh session with the updated allocation successfully created the load balancer and served HTTP. Verify quota changes with a fresh-session deployment before class; students should not need to change quotas or restart their lab to complete the exercise.
+
 ### One materials revision
 
-Publish the immutable, annotated tag `lab-2026-09-30.2` in both GitLab (Luna's source) and the private GitHub distribution repository before distributing these instructions. Both tags must identify the same commit containing these updated instructions and pass the remote checks below. A revision printed in the README does not create a release tag; the student's clone command will fail until that tag is published. This is a versioned materials release; the classroom pilot and other release gates below remain required. Keep Luna's published GitLab branch at this revision during a workshop, and make later edits on a separate branch. Do not move an existing release tag.
+Publish the immutable, annotated tag `lab-2026-09-30.3` in both GitLab (Luna's source) and the public GitHub distribution repository before distributing these instructions. Both tags must identify the same commit containing these updated instructions and pass the remote checks below. A revision printed in the README does not create a release tag; the student's clone command will fail until that tag is published. This is a versioned materials release; the classroom pilot and other release gates below remain required. Keep Luna's published GitLab branch at this revision during a workshop, and make later edits on a separate branch. Do not move an existing release tag.
 
 Students download a **new** checkout with the pinned clone command at the start of hands-on step 1. After cloning, verify the revision in their checkout:
 
@@ -51,16 +57,16 @@ cd "$HOME/oke-bootcamp"
 git describe --tags --exact-match HEAD
 ```
 
-Expect `lab-2026-09-30.2`. Students skip cloning if that folder exists. Inspect its revision and edits; do not reset, pull over, or delete a learner's work. If it is the wrong revision, prepare a separate directory and supply that path. The repository is private: resolve learner access beforehand, avoid credentials in clone URLs, and do not leave an instructor's Git credentials on a shared desktop. An instructor-distributed checkout must retain Git metadata and the release tag for this revision check.
+Expect `lab-2026-09-30.3`. Students skip cloning if that folder exists. Inspect its revision and edits; do not reset, pull over, or delete a learner's work. If it is the wrong revision, prepare a separate directory and supply that path. The GitHub distribution repository is public; its HTTPS clone should not request credentials. Verify unauthenticated access from Luna before class. Do not put credentials in clone URLs or leave an instructor's Git credentials on a shared desktop. An instructor-distributed checkout must retain Git metadata and the release tag for this revision check.
 
 Before publishing or teaching, compare these remote outputs. Both `refs/heads/main` values and both peeled tag values (`^{}`) must match the selected release commit. Stop on a missing or different value; a successful GitLab push alone does not synchronize GitHub.
 
 ```bash
-git ls-remote origin refs/heads/main 'refs/tags/lab-2026-09-30.2^{}'
-git ls-remote github refs/heads/main 'refs/tags/lab-2026-09-30.2^{}'
+git ls-remote origin refs/heads/main 'refs/tags/lab-2026-09-30.3^{}'
+git ls-remote github refs/heads/main 'refs/tags/lab-2026-09-30.3^{}'
 ```
 
-These remote names apply to the maintainer checkout. Verify Luna displays `Materials revision: lab-2026-09-30.2` and that its PDF/PNG links work. Record the resolved commit on the pilot timing sheet. Do not treat the tag itself as evidence that classroom testing passed.
+These remote names apply to the maintainer checkout. Verify Luna displays `Materials revision: lab-2026-09-30.3` and that its PDF/PNG links work. Record the resolved commit on the pilot timing sheet. Do not treat the tag itself as evidence that classroom testing passed.
 
 A local commit or tag does not update either remote. When publication is approved, review both remotes for newer work, then push the same reviewed commit and annotated tag to both without force. Use an atomic push per remote so its branch and tag update together. If either push fails, stop distribution until both pass the checks above; atomic pushes do not span two repositories.
 
@@ -135,6 +141,7 @@ Run the pilot in a separately authorized, disposable Luna session. Do not reset 
 - [ ] Record the repository revision, desktop tools, node shape/count, permissions, and exact provisioning start/Ready/metrics-ready times. Verify provisioning overlaps the lecture and finishes by minute 30.
 - [ ] Have a Kubernetes beginner follow the README, including chart downloads after cloning. Record prompts for help, navigation errors, step 1 setup time, and each checkpoint time. Confirm the learner can explain Deployment, Pod, and Service roles and interpret one dashboard change; copying output alone does not demonstrate understanding.
 - [ ] Inventory already-installed add-ons/releases and cached charts/images. Measure clean student installs; label any warm reuse. Do not compare a cached upgrade directly with a fresh install.
+- [ ] Verify a fresh session receives the configured load balancer count and bandwidth quotas. Deploy the app Service and confirm a public IP and successful HTTP response; preflight alone does not test this allocation.
 - [ ] Record command execution/waits separately from reading, editing, typing, and interpreting results. Actual learner delays are measured human time; simulated allowances must be labeled as estimates. Account for overlap once, not twice.
 - [ ] Verify both dashboard UIs and manual 2→4→2 scaling with HPA disabled throughout. Finish core work by lab minute 55 and debrief by workshop minute 90. Confirm a student who skips both extensions can complete every core requirement.
 - [ ] Separately rehearse optional HPA: numeric CPU metrics, the bounded burst, scale-out, explicit load reset, and scale-in. Measure its duration and test an interrupted attempt's reset. This remains a maintainer release check, not a core student requirement. Verify pod recovery also works without HPA.
@@ -164,7 +171,7 @@ The [September 18 rehearsal](rehearsal-2026-09-18.md), [September 21 reset/reins
 
 The preflight compatibility check follows the pinned Istio 1.31.x range, Kubernetes 1.32–1.36, and kubectl's one-minor-version skew rule. Review the script and its tests whenever changing these pins. Sources: [Istio supported releases](https://istio.io/latest/docs/releases/supported-releases/) and [kubectl version skew policy](https://kubernetes.io/releases/version-skew-policy/#kubectl).
 
-The private GitHub mirror and GitLab source must publish the same immutable materials tag, `lab-2026-09-30.2`, and matching main-branch commit for Luna. Publish both explicitly, without force-pushing, and verify the remote hashes as described above. Use GitLab's `ci.skip` push option for documentation/materials publication so it does not launch infrastructure jobs; required security scans remain a separate release gate. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
+The public GitHub mirror and GitLab source must publish the same immutable materials tag, `lab-2026-09-30.3`, and matching main-branch commit for Luna. Publish both explicitly, without force-pushing, and verify the remote hashes as described above. Use GitLab's `ci.skip` push option for documentation/materials publication so it does not launch infrastructure jobs; required security scans remain a separate release gate. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
 
 `terraform/` and CI scripts are instructor-managed; `charts/` and `helm/` contain learner deployment materials. Do not mix the legacy `kubernetes/` manifests into the Helm student workflow. See [CI administration](gitlab-ci.md), [local Terraform workflow](maintainer-infrastructure.md), and [cleanup](cleanup.md).
 
