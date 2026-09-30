@@ -85,7 +85,22 @@ class ClusterAccessMaterials(unittest.TestCase):
             'kubectl config get-contexts &&',
             'kubectl config current-context',
         ])
-        self.assertEqual(re.sub(r"```bash\n.*?```", "", verification, flags=re.S).strip(), "")
+        self.assertIn("no `export KUBECONFIG` is needed", verification)
+        self.assertIn("If the file is missing or empty", verification)
+        self.assertIn("Do not create an empty file", verification)
+
+    def test_learner_commands_do_not_export_a_kubeconfig_override(self):
+        for name in ("README.md", "docs/cluster-access.md", "docs/troubleshooting.md",
+                     "docs/monitoring.md", "docs/cleanup.md"):
+            with self.subTest(file=name):
+                contents = (ROOT / name).read_text()
+                blocks = re.findall(r"```(?:bash|sh)?\n(.*?)```", contents, re.S)
+                for block in blocks:
+                    self.assertNotRegex(block, r"(?m)^\s*export KUBECONFIG=")
+                    self.assertNotIn(".kube/oke-lab", block)
+        outputs = (ROOT / "terraform/outputs.tf").read_text()
+        self.assertIn('$HOME/.kube/config', outputs)
+        self.assertNotIn('.kube/oke-lab', outputs)
 
     def test_access_guide_and_instructor_gate_match_student_flow(self):
         access = (ROOT / "docs/cluster-access.md").read_text()

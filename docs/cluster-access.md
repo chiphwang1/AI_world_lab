@@ -59,10 +59,13 @@ kubectl and Helm use `~/.kube/config` by default; the current context selects an
 
 ```bash
 unset KUBECONFIG
-ls -l "$HOME/.kube/config"
-kubectl config get-contexts
+ls -l "$HOME/.kube/config" &&
+test -s "$HOME/.kube/config" &&
+kubectl config get-contexts &&
 kubectl config current-context
 ```
+
+If older instructions set `KUBECONFIG` to `~/.kube/oke-lab`, use `unset KUBECONFIG` above instead. If the default file is missing or empty, [generate it](#generate-your-kubeconfig-on-the-desktop) before continuing; changing the environment variable does not create a kubeconfig.
 
 The kubeconfig command selects your cluster's context. If the file contains only that context, no selection command is needed. If you use a file with multiple contexts and need to switch back to your Luna cluster, copy its context name from the list:
 

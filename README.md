@@ -22,7 +22,7 @@ If time permits, use the **Horizontal Pod Autoscaler (HPA)** to adjust replicas 
 
 Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private.
 
-Materials revision: `lab-2026-09-29.1`. Your checkout and Luna instructions must show this same revision.
+Materials revision: `lab-2026-09-30.1`. Your checkout and Luna instructions must show this same revision.
 
 Record checkpoints in the [completion sheet (PDF)](docs/completion-sheet.pdf) or [Markdown version](docs/completion-sheet.md). You can save or print the PDF.
 
@@ -56,7 +56,7 @@ Use each code block's **Copy** button, then **Edit → Paste** in the Luna termi
 In a **Bash terminal** on your Luna desktop, download the lab repository. Keep this window open as **terminal 1**:
 
 ```bash
-git clone --branch lab-2026-09-29.1 --single-branch \
+git clone --branch lab-2026-09-30.1 --single-branch \
   https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&
   cd "$HOME/oke-bootcamp"
 ```
@@ -101,6 +101,8 @@ Your **kubeconfig** tells kubectl which cluster to connect to and how to authent
 
 ### Verify your kubeconfig
 
+Use the default file for all lab commands; no `export KUBECONFIG` is needed. If you previously set it to another path, the first command below clears that override.
+
 ```bash
 unset KUBECONFIG
 ls -l "$HOME/.kube/config" &&
@@ -108,6 +110,8 @@ test -s "$HOME/.kube/config" &&
 kubectl config get-contexts &&
 kubectl config current-context
 ```
+
+If the file is missing or empty, return to step 6 above to generate it at `~/.kube/config`. Do not create an empty file or continue to preflight.
 
 ### Check cluster readiness
 
