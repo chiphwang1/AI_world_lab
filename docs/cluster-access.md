@@ -6,19 +6,18 @@ Use this page for additional kubeconfig instructions or access troubleshooting d
 
 Follow [Find your lab login and compartment](../README.md#find-your-lab-login-and-compartment): open the **Luna-Lab** desktop icon (also labeled **Luna Lab**), choose **Quick Links → OCI Console**, and sign in with your assigned username and password from **Credentials**. Do not use the SSO Link. Paste with **Ctrl+V** or right-click **Paste**, then click **Sign In**. Find your assigned region and **Compartment Name** in **Lab Details** or the page's **Oracle Cloud** section. Missing login/session details require instructor help, not Terraform-log inspection or a new personal account.
 
-In the Console, select the session's region. Open the navigation menu, then **Developer Services → Containers & Artifacts → Kubernetes Clusters (OKE)**. In the **Compartment** filter, expand the hierarchy if needed and select the exact compartment shown on your Luna Lab page. Open the cluster Luna created for you; wait if it is still provisioning. Select **Access Cluster** (under **Actions** if necessary), then **Local Access**, and copy the displayed command's cluster OCID and region into the example below. Run it in the **Luna desktop's Bash terminal**. Console login does not authenticate this terminal; its OCI CLI identity must already be configured. See [Oracle's cluster access guide](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm).
+In the Console, select the session's region. Open the navigation menu, then **Developer Services → Containers & Artifacts → Kubernetes Clusters (OKE)**. In the **Compartment** filter, expand the hierarchy if needed and select the exact compartment shown on your Luna Lab page. Open the cluster Luna created for you; wait if it is still provisioning. Select **Access Cluster** (under **Actions** if necessary), then **Local Access**. Select **Public Endpoint** for this lab, and copy the displayed command's cluster OCID and region into the example below. Run it in the **Luna desktop's Bash terminal**. Console login does not authenticate this terminal; its OCI CLI identity must already be configured. See [Oracle's cluster access guide](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm).
 
 ## Generate your kubeconfig on the desktop
 
 Use the cluster OCID and region from your cluster's Console access command. An OCID is OCI's resource identifier. Use the desktop OCI profile configured for your Luna session in `~/.oci/config`; ask for help if you cannot identify it. Use `DEFAULT` only if that is your session's profile. Do not generate new API keys for this exercise.
 
-Replace the three placeholders below before running. This example uses the lab's API-key authentication and the public Kubernetes endpoint used by new GitLab/Luna deployments. The Luna desktop needs outbound TCP 6443 access to that endpoint. For an existing private-only cluster, use `PRIVATE_ENDPOINT` and its configured private network path; generating a kubeconfig does not change the cluster's endpoint.
+Replace the three placeholders below before running. **Use public endpoint access for this lab:** the command must contain `--kube-endpoint PUBLIC_ENDPOINT`. If the Console command contains `PRIVATE_ENDPOINT`, select **Public Endpoint** under **Local Access** and copy it again. If public endpoint access is unavailable, ask the instructor before continuing. This example uses the lab's API-key authentication. The Luna desktop needs outbound TCP 6443 access to the public Kubernetes endpoint; generating a kubeconfig does not change the cluster's endpoint.
 
 ```bash
 export LAB_REGION='<your-session-region>'
 export LAB_CLUSTER_OCID='<your-cluster-ocid>'
 export LAB_OCI_PROFILE='<your-session-profile>'
-unset KUBECONFIG
 umask 077
 mkdir -p "$HOME/.kube"
 oci ce cluster create-kubeconfig --cluster-id "$LAB_CLUSTER_OCID" \
@@ -44,7 +43,6 @@ Open the Cloud Shell menu at the top left, choose **Download**, enter `oke-lab-k
 mkdir -p "$HOME/.kube"
 cp -i "$HOME/Downloads/oke-lab-kubeconfig" "$HOME/.kube/config"
 chmod 600 "$HOME/.kube/config"
-unset KUBECONFIG
 export OCI_CLI_PROFILE='<your-session-profile>'
 export OCI_CLI_AUTH=api_key
 ```
@@ -55,7 +53,9 @@ A downloaded kubeconfig does not establish network access or grant permissions. 
 
 ## Verify the selected file and context
 
-kubectl and Helm use `~/.kube/config` by default; the current context selects an entry inside it. Changing directories does not select a cluster. In each new terminal, clear any inherited `KUBECONFIG` override so all lab commands use the default file:
+On the fresh Luna VM, kubectl and Helm automatically use `~/.kube/config` in every terminal. After creating it, run `bash scripts/check-ready.sh` from the repository root. Preflight checks the file, selected context, API access, workers, and metrics.
+
+The commands below are **troubleshooting only**. Use them if preflight reports a kubeconfig or context error, or if you are reusing a terminal with earlier settings:
 
 ```bash
 unset KUBECONFIG
@@ -65,7 +65,7 @@ kubectl config get-contexts &&
 kubectl config current-context
 ```
 
-If older instructions set `KUBECONFIG` to `~/.kube/oke-lab`, use `unset KUBECONFIG` above instead. If the default file is missing or empty, [generate it](#generate-your-kubeconfig-on-the-desktop) before continuing; changing the environment variable does not create a kubeconfig.
+`unset KUBECONFIG` clears an override from earlier work. If the default file is missing or empty, [generate it](#generate-your-kubeconfig-on-the-desktop) before continuing; do not create an empty file.
 
 The kubeconfig command selects your cluster's context. If the file contains only that context, no selection command is needed. If you use a file with multiple contexts and need to switch back to your Luna cluster, copy its context name from the list:
 
@@ -77,7 +77,7 @@ This saves the selection in the kubeconfig. New terminals using that file share 
 
 If your cluster's context is absent, confirm the file path or generate the kubeconfig above. `no context exists` refers to the selected file; the same context may exist in another kubeconfig. Return to the README's read-only preflight check, which uses the current context without a `--context` argument.
 
-The default-file instructions above apply to the Luna desktop. For the maintainer's existing local rehearsal, follow [the rehearsal environment instructions](rehearsal-2026-09-18.md#reuse-and-ongoing-cost). That separate environment uses a dedicated project kubeconfig; its private files are not distributed to learners. Retain its explicit `KUBECONFIG` override in every terminal instead of running the Luna-specific `unset KUBECONFIG` commands.
+The default-file instructions above apply to the Luna desktop. For the maintainer's existing local rehearsal, follow [the rehearsal environment instructions](rehearsal-2026-09-18.md#reuse-and-ongoing-cost). That separate environment uses a dedicated project kubeconfig; its private files are not distributed to learners. Retain its explicit `KUBECONFIG` override in every terminal rather than using the default file.
 
 ## Optional extension: discover the cluster with OCI CLI
 

@@ -2,11 +2,11 @@
 
 [Download the printable completion sheet (PDF)](completion-sheet.pdf). If it opens in your browser, use the PDF viewer's download button to save it. The Markdown version below is available for copying into your notes.
 
-Copy this sheet into your own notes. Fill it during the existing [lab checkpoints](../README.md), not as an extra exercise. Complete the core sections; HPA and pod recovery are optional. Keep credentials, kubeconfig contents, and tokens out of your notes.
+Copy this sheet into your own notes. Use it to record the results of the [lab steps](../README.md). Complete the core sections; HPA and pod recovery are optional. Keep credentials, kubeconfig contents, and tokens out of your notes.
 
 Name: __________  Date: __________  Tested repository revision: __________
 
-## Core checkpoints
+## Core success checks
 
 - [ ] Preflight passed for my cluster's current context; two workers are Ready with numeric resource metrics.
 - [ ] My public app returned my customized message; two app pods showed `2/2` Ready.
@@ -47,32 +47,29 @@ Six replicas is a limit, not a required peak. The two endpoints do different wor
 
 ## Core debrief
 
-1. Which Kubernetes object keeps the application reachable as pods change?
-2. Which component supplies Kiali and Grafana with data? Explain one dashboard reading.
+Discuss these three questions at the end of the lab:
 
-My evidence (question 2): Dashboard metric/value: __________  Source: __________
+1. What changed when you scaled from two to four pods?
 
-3. What changed during scaling: app replicas, worker nodes, Service IP?
-
-My evidence (question 3): App pods before/during/after: ____ / ____ / ____
+My evidence (question 1): App pods before/during/after: ____ / ____ / ____
 
 Worker names: ____________________  Service IP before/after: ____________________
 
-4. Which probe removes an unready pod from normal Service traffic, and which can restart a container? Can a pod be Running but not Ready, with zero restarts?
+2. How do Kiali and Grafana help you understand the application?
 
-## Optional HPA debrief
+My evidence (question 2): Kiali traffic edge: __________  Grafana metric/value: __________
 
-HPA metrics: CPU source: __________  Why is Grafana outside the scaling control loop? __________
+3. What is the difference between a pod and a worker node?
 
-HPA scale-in: Final HPA replicas: ____  Ready app pods: ____  Why can proxy count lag? __________
+## Optional HPA final checks
 
-CPU prediction: a `200m` CPU request with a 60% HPA target corresponds to ___ CPU usage.
+HPA scale-in: Final HPA replicas: ____  Ready app pods: ____  Load reset: __________
 
 ## Optional pod recovery
 
 Pod recovery: skipped / completed / blocked. HPA is not a prerequisite.
 
-Recovery evidence: Old/new pod names: ____________________  Service IP changed? __________
+Recovery evidence: Old/new pod names: ____________________  Service IP before/after: __________
 
 ## Finish
 
@@ -80,4 +77,4 @@ Core result: completed / needs instructor help / demonstration only. Skipped ext
 
 If blocked, record the step, symptom, and last observed state: __________
 
-Leave releases for Luna's cleanup. Reset any HPA burst before leaving. Stop watches and port-forwards; these do not stop in-cluster traffic. Report blocked checkpoints to the instructor.
+Leave releases for Luna's cleanup. Reset any HPA burst before leaving. Stop watches and port-forwards; these do not stop in-cluster traffic. Report unfinished steps to the instructor.

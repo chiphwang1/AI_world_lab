@@ -22,7 +22,7 @@ class ClusterAccessMaterials(unittest.TestCase):
         readme = (ROOT / "README.md").read_text()
         headings = ["### Find your lab login and compartment",
                     "### Open your own cluster in the OCI Console",
-                    "### Verify your kubeconfig"]
+                    "### Check cluster readiness"]
         positions = [readme.index(heading) for heading in headings]
         self.assertEqual(positions, sorted(positions))
         login = readme[positions[0]:positions[1]]
@@ -48,7 +48,7 @@ class ClusterAccessMaterials(unittest.TestCase):
     def test_console_selection_uses_oke_and_exact_assigned_compartment(self):
         readme = (ROOT / "README.md").read_text()
         cluster = readme.split("### Open your own cluster in the OCI Console", 1)[1].split(
-            "### Verify your kubeconfig", 1)[0]
+            "### Check cluster readiness", 1)[0]
         for label in ("Developer Services", "Containers & Artifacts", "Kubernetes Clusters (OKE)",
                       "Compartment", "exact **Compartment Name**", "hierarchy"):
             with self.subTest(label=label):
@@ -61,34 +61,28 @@ class ClusterAccessMaterials(unittest.TestCase):
         readme = (ROOT / "README.md").read_text()
         access = (ROOT / "docs/cluster-access.md").read_text()
         self.assertIn("Console login does not authenticate this terminal", access)
-        self.assertIn("[desktop OCI authentication settings](docs/cluster-access.md#generate-your-kubeconfig-on-the-desktop)", readme)
-        self.assertIn('unset KUBECONFIG', readme)
-        self.assertIn("Do not add `--overwrite`", readme)
+        self.assertIn("Do not add `--overwrite`", access)
         self.assertIn("Example page only—not a shared student cluster", readme)
         self.assertIn("bash scripts/check-ready.sh", readme)
 
-    def test_kubeconfig_is_created_before_commands_only_verification(self):
+    def test_fresh_vm_setup_creates_kubeconfig_then_runs_preflight(self):
         readme = (ROOT / "README.md").read_text()
-        creation, remainder = readme.split("### Verify your kubeconfig", 1)
-        self.assertIn("Copy the displayed `oci ce cluster create-kubeconfig` command", creation)
-        self.assertIn('Use `--file "$HOME/.kube/config"`', creation)
-        preparation = '   ```bash\n   umask 077\n   mkdir -p "$HOME/.kube"\n   ```'
-        self.assertIn(preparation, creation)
-        self.assertLess(creation.index(preparation), creation.index("oci ce cluster create-kubeconfig"))
-        self.assertIn("Run the edited command in **terminal 1** to create your kubeconfig", creation)
-        verification = remainder.split("### Check cluster readiness", 1)[0]
-        blocks = re.findall(r"```bash\n(.*?)```", verification, re.S)
-        self.assertEqual(len(blocks), 1)
-        self.assertEqual(blocks[0].splitlines(), [
-            'unset KUBECONFIG',
-            'ls -l "$HOME/.kube/config" &&',
-            'test -s "$HOME/.kube/config" &&',
-            'kubectl config get-contexts &&',
-            'kubectl config current-context',
-        ])
-        self.assertIn("no `export KUBECONFIG` is needed", verification)
-        self.assertIn("If the file is missing or empty", verification)
-        self.assertIn("Do not create an empty file", verification)
+        creation, remainder = readme.split("### Check cluster readiness", 1)
+        self.assertIn("run the displayed commands in order, including `oci ce cluster create-kubeconfig`", creation)
+        self.assertIn("`~/.kube/config`", creation)
+        self.assertNotIn("prepare the kubeconfig directory", creation)
+        self.assertIn("**Public Endpoint**", creation)
+        self.assertNotIn("Before running it:", creation)
+        self.assertIn("In **terminal 1**, follow the **Local Access** instructions", creation)
+        self.assertIn("bash scripts/check-ready.sh", remainder)
+        core = readme.split("## Appendix A:", 1)[0]
+        for diagnostic in ("unset KUBECONFIG", "kubectl config get-contexts",
+                           'ls -l "$HOME/.kube/config"', 'test -s "$HOME/.kube/config"'):
+            self.assertNotIn(diagnostic, core)
+        access = (ROOT / "docs/cluster-access.md").read_text()
+        recovery = access.split("## Verify the selected file and context", 1)[1]
+        self.assertIn("**troubleshooting only**", recovery)
+        self.assertIn("unset KUBECONFIG", recovery)
 
     def test_learner_commands_do_not_export_a_kubeconfig_override(self):
         for name in ("README.md", "docs/cluster-access.md", "docs/troubleshooting.md",
@@ -134,17 +128,15 @@ class ClusterAccessMaterials(unittest.TestCase):
     def test_setup_runs_once_and_new_dashboard_terminals_select_the_same_file(self):
         readme = (ROOT / "README.md").read_text()
         core = readme.split("## Appendix A:", 1)[0]
-        export = 'unset KUBECONFIG'
-        self.assertEqual(core.count(f"\n{export}\n"), 3)
-        self.assertEqual(core.split("## 2.", 1)[0].count(f"\n{export}\n"), 1)
+        self.assertNotIn('unset KUBECONFIG', core)
         self.assertEqual(core.count("bash scripts/check-ready.sh"), 1)
         self.assertEqual(core.count("bash scripts/prepare-charts.sh --check"), 1)
         self.assertNotIn("LAB_CONTEXT", readme)
         self.assertNotIn("kubectl --context", core)
         for service, ports in (("kiali", "20001:20001"), ("grafana", "13000:80")):
-            self.assertIn(f"{export}\nkubectl -n istio-system port-forward "
+            self.assertIn(f"kubectl -n istio-system port-forward "
                           f"--address 127.0.0.1 svc/{service} {ports}", core)
-        self.assertIn("selected context stays saved in the file until changed", readme)
+        self.assertIn("All three terminals use the `~/.kube/config` created in step 1", readme)
         access = (ROOT / "docs/cluster-access.md").read_text()
         self.assertIn("repeat `use-context` only when you need to switch it", access)
 

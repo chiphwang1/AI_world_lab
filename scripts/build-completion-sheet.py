@@ -60,19 +60,19 @@ def main():
     def rows(title):
         return [line for line in section(title) if line.startswith("| ")]
 
-    core_checks = checks("Core checkpoints")
+    core_checks = checks("Core success checks")
     hpa_checks = checks("Optional HPA observations")
     core_rows = rows("Core observations")
     hpa_rows = rows("Optional HPA observations")
-    questions = [plain(line) for line in section("Core debrief") if re.match(r"^[1-4]\. ", line)]
-    if (len(core_checks), len(hpa_checks), len(questions), len(core_rows), len(hpa_rows)) != (4, 3, 4, 4, 4):
+    questions = [plain(line) for line in section("Core debrief") if re.match(r"^[1-3]\. ", line)]
+    if (len(core_checks), len(hpa_checks), len(questions), len(core_rows), len(hpa_rows)) != (4, 3, 3, 4, 4):
         raise ValueError("Completion-sheet structure changed; review PDF layout")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     pdf = canvas.Canvas(str(args.output), pagesize=(WIDTH, HEIGHT), invariant=1)
     pdf.setTitle("OKE lab completion sheet")
     pdf.setAuthor("OKE Bootcamp")
-    pdf.setSubject("Student checkpoints, observations, and debrief")
+    pdf.setSubject("Student success checks, observations, and debrief")
 
     def paragraph(text, y, style=BODY, x=LEFT, width=RIGHT-LEFT):
         p = Paragraph(escape(text), style)
@@ -138,7 +138,7 @@ def main():
     y = page(1, "Record core observations; leave optional HPA sections blank if skipped.")
     y = paragraph("Keep credentials, kubeconfig contents, and tokens out of this sheet.", y, SMALL)-10
     y = paragraph(one("Name:"), y)-12
-    y = heading("Core checkpoints", y)
+    y = heading("Core success checks", y)
     y = checklist(core_checks, y)
     y = paragraph("My customized response message:", y-3)-12
     rule(y)
@@ -158,14 +158,14 @@ def main():
         y = paragraph(question, y)-14
         rule(y)
         y -= 9
-        if number in (2, 3):
+        if number in (1, 2):
             y = paragraph(one(f"My evidence (question {number}):"), y, SMALL)-4
-        if number == 3:
+        if number == 1:
             y = paragraph(one("Worker names:"), y, SMALL)-4
         y -= 6
-    y = heading("Optional HPA checklist and debrief", y)
+    y = heading("Optional HPA final checks", y)
     y = checklist(hpa_checks, y)
-    for prefix in ("Peak HPA", "Six replicas", "HPA metrics:", "HPA scale-in:", "CPU prediction:"):
+    for prefix in ("Peak HPA", "Six replicas", "HPA scale-in:"):
         y = paragraph(one(prefix), y, SMALL)-5
     y = heading("Optional pod recovery", y)
     y = paragraph(one("Pod recovery:"), y, SMALL)-7

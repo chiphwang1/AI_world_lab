@@ -48,7 +48,7 @@ In the September 30 Luna rehearsal, the app Service failed with `QuotaExceeded` 
 
 ### One materials revision
 
-Publish the immutable, annotated tag `lab-2026-09-30.3` in both GitLab (Luna's source) and the public GitHub distribution repository before distributing these instructions. Both tags must identify the same commit containing these updated instructions and pass the remote checks below. A revision printed in the README does not create a release tag; the student's clone command will fail until that tag is published. This is a versioned materials release; the classroom pilot and other release gates below remain required. Keep Luna's published GitLab branch at this revision during a workshop, and make later edits on a separate branch. Do not move an existing release tag.
+Publish the immutable, annotated tag `lab-2026-09-30.4` in both GitLab (Luna's source) and the public GitHub distribution repository before distributing these instructions. Both tags must identify the same commit containing these updated instructions and pass the remote checks below. A revision printed in the README does not create a release tag; the student's clone command will fail until that tag is published. This is a versioned materials release; the classroom pilot and other release gates below remain required. Keep Luna's published GitLab branch at this revision during a workshop, and make later edits on a separate branch. Do not move an existing release tag.
 
 Students download a **new** checkout with the pinned clone command at the start of hands-on step 1. After cloning, verify the revision in their checkout:
 
@@ -57,16 +57,16 @@ cd "$HOME/oke-bootcamp"
 git describe --tags --exact-match HEAD
 ```
 
-Expect `lab-2026-09-30.3`. Students skip cloning if that folder exists. Inspect its revision and edits; do not reset, pull over, or delete a learner's work. If it is the wrong revision, prepare a separate directory and supply that path. The GitHub distribution repository is public; its HTTPS clone should not request credentials. Verify unauthenticated access from Luna before class. Do not put credentials in clone URLs or leave an instructor's Git credentials on a shared desktop. An instructor-distributed checkout must retain Git metadata and the release tag for this revision check.
+Expect `lab-2026-09-30.4`. Students skip cloning if that folder exists. Inspect its revision and edits; do not reset, pull over, or delete a learner's work. If it is the wrong revision, prepare a separate directory and supply that path. The GitHub distribution repository is public; its HTTPS clone should not request credentials. Verify unauthenticated access from Luna before class. Do not put credentials in clone URLs or leave an instructor's Git credentials on a shared desktop. An instructor-distributed checkout must retain Git metadata and the release tag for this revision check.
 
 Before publishing or teaching, compare these remote outputs. Both `refs/heads/main` values and both peeled tag values (`^{}`) must match the selected release commit. Stop on a missing or different value; a successful GitLab push alone does not synchronize GitHub.
 
 ```bash
-git ls-remote origin refs/heads/main 'refs/tags/lab-2026-09-30.3^{}'
-git ls-remote github refs/heads/main 'refs/tags/lab-2026-09-30.3^{}'
+git ls-remote origin refs/heads/main 'refs/tags/lab-2026-09-30.4^{}'
+git ls-remote github refs/heads/main 'refs/tags/lab-2026-09-30.4^{}'
 ```
 
-These remote names apply to the maintainer checkout. Verify Luna displays `Materials revision: lab-2026-09-30.3` and that its PDF/PNG links work. Record the resolved commit on the pilot timing sheet. Do not treat the tag itself as evidence that classroom testing passed.
+These remote names apply to the maintainer checkout. Verify Luna displays `Materials revision: lab-2026-09-30.4` and that its PDF/PNG links work. Record the resolved commit on the pilot timing sheet. Do not treat the tag itself as evidence that classroom testing passed.
 
 A local commit or tag does not update either remote. When publication is approved, review both remotes for newer work, then push the same reviewed commit and annotated tag to both without force. Use an atomic push per remote so its branch and tag update together. If either push fails, stop distribution until both pass the checks above; atomic pushes do not span two repositories.
 
@@ -108,27 +108,21 @@ Keep two workers for this tested per-learner workload. Validate allocatable capa
 
 ## Debrief answer guide
 
-Use the [completion sheet](completion-sheet.md) to assess both observations and explanations. At each prediction, wait about 30 seconds before giving the explanation: students state or write a prediction, inspect the existing output, then explain the result to a partner or instructor. Ask "Which value supports that?" before correcting an answer. These pauses are included in the exercise estimates; use the install/load waits and checkpoint time rather than adding another quiz. Do not require a peak of six replicas or invent readings for missing panels.
+Use the [completion sheet](completion-sheet.md) to record successful checks and observed values during the walkthrough. Keep students moving through each action and its expected result; save discussion questions for the final debrief.
 
-At the dashboard checkpoint, ask learners to show the Kiali traffic edge and explain one Grafana reading, then name Prometheus as their shared data source. The core observation table follows manual 2→4→2 scaling; HPA remains disabled. Use Ready pod counts as evidence and discuss why proxy count can lag. More replicas do not generate more requests: baseline traffic keeps its two-second interval, although the learner's curl requests briefly add traffic. Do not require a particular latency improvement from this low-load exercise.
+Use only these three questions for the core debrief:
 
-Listen for a reason, not only a correct tool name. For example, a learner should identify a request-rate or latency reading supplied by Prometheus and use pod output to explain the changed replica count. For the Running/Ready question, let the learner distinguish traffic eligibility from restart behavior before confirming that a Running pod can be unready with zero restarts. Reveal the answer guide after the learner has attempted the explanation.
-
-Use the diagram progressively: trace browser and generator requests in step 3 and monitoring in step 4. Before the first deployment, distinguish worker count, Deployment ready replicas, and ready containers within each pod. During manual scaling, have students use the `NODE` column to locate their app pods and explain desired state. Complete the core evidence fields and questions 1–4 during the existing waits and debrief. Measure the revised schedule in the beginner pilot; moving HPA out of the core does not prove the hour is achievable.
-
-Only for the optional HPA extension, trace the CPU-based autoscaling panel and explain requests/limits before enabling HPA in step 6. Use the `/work` calculations to connect app CPU demand to replica growth. Compare baseline and load readings without promising a higher request rate or lower latency. Check numeric HPA metrics before load, scale-out above two, return to two Ready app pods, and an explicit load reset. Record extension results separately; a skipped or blocked extension does not erase completed core work.
-
-| Prompt | What a successful explanation includes |
+| Question | What a successful explanation includes |
 |---|---|
-| Stable endpoint | The Service survives pod replacement; its OCI LoadBalancer address remains unchanged during pod scaling. |
-| Dashboard source | Prometheus supplies Kiali and Grafana with mesh telemetry. |
-| Dashboard interpretation | Request rate counts requests per second; success rate counts the percentage with HTTP 2xx/3xx responses. p95 estimates the response time within which about 95% of requests finish. More replicas do not create more demand, and proxy count can lag actual Ready pods. |
-| Manual scaling | Helm changes the desired app count 2→4→2; Kubernetes maintains it. Worker count and Service IP stay unchanged. |
-| Probes and Degraded | Readiness excludes an unready pod from normal Service traffic; liveness can restart a failing container. Kiali's label alone does not identify a probe failure: inspect the affected object, pod state, events, and request errors. |
-| Optional HPA metrics and scale-in | Metrics Server supplies CPU metrics; Prometheus supplies dashboards. HPA chooses the desired count. Completed scale-in has two HPA replicas and two Ready app pods after CPU falls; proxy count can lag. |
-| Optional HPA load comparison | `/work` adds CPU work. Its latency comparison with `/` cannot isolate autoscaling's effect because the workload changes too. |
-| Optional CPU prediction | 60% of a `200m` request is `120m`. Utilization is relative to the request, not the CPU limit; the HPA here measures `web`, not the sidecar. |
-| Optional recovery | The Deployment's ReplicaSet replaces a deleted pod at the same desired count. This is self-healing, not an HPA scale-out. |
+| What changed when you scaled from two to four pods? | Helm changed the desired app replica count, and Kubernetes created additional pods. The worker count and Service IP stayed unchanged. |
+| How do Kiali and Grafana help you understand the application? | Kiali maps service traffic; Grafana charts metrics over time. Both use Prometheus data. Learners can point to the traffic edge and one request-rate, success-rate, or latency reading. |
+| What is the difference between a pod and a worker node? | A worker is a machine that runs pods. Each app pod here contains the web app and its Istio proxy. Scaling pods does not add workers. |
+
+Use Ready pod counts to verify scaling; dashboard proxy counts can lag. The baseline generator keeps its two-second request interval as replicas change, so do not require a latency improvement or higher request rate. The learner's curl requests can briefly add traffic.
+
+HPA and recovery remain optional. For an HPA attempt, verify numeric CPU metrics, scale-out above two, return to two Ready app pods, and an explicit load reset. Do not require a peak of six replicas or invented readings for missing panels. These are success checks, not additional debrief questions.
+
+Measure the revised schedule in a beginner pilot; simpler instructions alone do not prove the hour is achievable.
 
 Core completion requires the customized public response, mesh traffic, baseline dashboard readings, manual 2→4→2 scaling observations with unchanged workers and Service IP, and the core debrief. No HPA resource, load burst, or automatic scale-in is required. Missing core evidence needs follow-up, not a checked box. Record HPA and recovery separately as skipped, completed, or blocked; any attempted burst must still be reset. A partner discussion can assess explanations without another quiz.
 
@@ -171,7 +165,7 @@ The [September 18 rehearsal](rehearsal-2026-09-18.md), [September 21 reset/reins
 
 The preflight compatibility check follows the pinned Istio 1.31.x range, Kubernetes 1.32–1.36, and kubectl's one-minor-version skew rule. Review the script and its tests whenever changing these pins. Sources: [Istio supported releases](https://istio.io/latest/docs/releases/supported-releases/) and [kubectl version skew policy](https://kubernetes.io/releases/version-skew-policy/#kubectl).
 
-The public GitHub mirror and GitLab source must publish the same immutable materials tag, `lab-2026-09-30.3`, and matching main-branch commit for Luna. Publish both explicitly, without force-pushing, and verify the remote hashes as described above. Use GitLab's `ci.skip` push option for documentation/materials publication so it does not launch infrastructure jobs; required security scans remain a separate release gate. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
+The public GitHub mirror and GitLab source must publish the same immutable materials tag, `lab-2026-09-30.4`, and matching main-branch commit for Luna. Publish both explicitly, without force-pushing, and verify the remote hashes as described above. Use GitLab's `ci.skip` push option for documentation/materials publication so it does not launch infrastructure jobs; required security scans remain a separate release gate. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
 
 `terraform/` and CI scripts are instructor-managed; `charts/` and `helm/` contain learner deployment materials. Do not mix the legacy `kubernetes/` manifests into the Helm student workflow. See [CI administration](gitlab-ci.md), [local Terraform workflow](maintainer-infrastructure.md), and [cleanup](cleanup.md).
 

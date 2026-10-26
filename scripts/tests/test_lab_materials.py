@@ -44,8 +44,8 @@ class LabMaterials(unittest.TestCase):
                       '  cd "$HOME/oke-bootcamp"', readme)
         self.assertNotIn("git describe --tags --exact-match HEAD", readme)
         self.assertIn("bash scripts/prepare-charts.sh --check", readme)
-        self.assertIn("bash scripts/prepare-charts.sh --download &&\n"
-                      "bash scripts/prepare-charts.sh --check", readme)
+        self.assertLess(readme.index("bash scripts/prepare-charts.sh --download"),
+                        readme.index("bash scripts/prepare-charts.sh --check"))
 
     def test_repository_download_is_one_instruction_and_command(self):
         readme = (ROOT / "README.md").read_text()
@@ -54,7 +54,8 @@ class LabMaterials(unittest.TestCase):
         blocks = re.findall(r"```bash\n(.*?)```", section, re.S)
         self.assertEqual(len(blocks), 1)
         self.assertTrue(blocks[0].startswith("git clone --branch "))
-        self.assertEqual(re.sub(r"```bash\n.*?```", "", section, flags=re.S).strip(), "")
+        self.assertIn("`detached HEAD` notice is expected", section)
+        self.assertIn("If Git prints `fatal:`", section)
 
     def test_connection_setup_starts_the_timed_exercises(self):
         readme = (ROOT / "README.md").read_text()
@@ -131,25 +132,27 @@ class LabMaterials(unittest.TestCase):
         readme = (ROOT / "README.md").read_text()
         introduction = readme.split("## Schedule", 1)[0]
         for concept in ("worker nodes", "ReplicaSet", "Kubernetes control plane",
-                        "manage application traffic through proxies"):
+                        "uses the proxies to manage application traffic"):
             with self.subTest(concept=concept):
                 self.assertIn(concept, introduction)
         self.assertNotIn("`istiod`", introduction)
         istio_install = readme.split("### Install Istio", 1)[1].split("### Install Prometheus", 1)[0]
         self.assertIn("`istiod`, which configures the proxies", istio_install)
-        for explanation in ("Deployment `READY 2/2`", "Each pod's `READY 2/2`",
+        for explanation in ("**2 ready pods / 2 desired pods**", "**2 ready containers / 2 containers in that pod**",
                             "**desired state**", "`NODE` column",
-                            "current average utilization / target utilization",
-                            "evidence of increased demand", "evidence of Kubernetes' response"):
+                            "current average utilization / target utilization"):
             with self.subTest(explanation=explanation):
                 self.assertIn(explanation, readme)
-        self.assertIn("generator bypass", readme)
-        self.assertIn("Trace the monitoring path", readme)
-        self.assertIn("Trace the CPU-based autoscaling path", readme)
         sheet = (ROOT / "docs/completion-sheet.md").read_text()
-        for question in (2, 3):
+        for question in (1, 2):
             self.assertIn(f"My evidence (question {question}):", sheet)
         self.assertNotIn("assigned context", sheet)
+        debrief = readme.split("### Final debrief", 1)[1].split("## Appendix A:", 1)[0]
+        sheet_debrief = sheet.split("## Core debrief", 1)[1].split("## Optional HPA final checks", 1)[0]
+        questions = re.findall(r"^[1-3]\. (.+)$", debrief, re.M)
+        self.assertEqual(len(questions), 3)
+        self.assertEqual(questions, re.findall(r"^[1-3]\. (.+)$", sheet_debrief, re.M))
+        self.assertNotIn("**Checkpoint:**", readme.split("## Appendix A:", 1)[0])
 
     def test_hpa_inspection_follows_creation(self):
         readme = (ROOT / "README.md").read_text()
@@ -169,7 +172,7 @@ class LabMaterials(unittest.TestCase):
         self.assertIn("manual scaling", core_goals)
         manual = readme.split("## 5. Scale manually", 1)[1].split("## 6.", 1)[0]
         for detail in ("--set replicaCount=4", "--set replicaCount=2",
-                       "**Core checkpoint:**", "Go to **step 8**"):
+                       "**Before continuing:**", "Go to **step 8**"):
             self.assertIn(detail, manual)
         for detail in ("Neither extension is required", "at least 15 minutes",
                        "by lab minute 40", "by lab minute 50",
@@ -258,7 +261,8 @@ class LabMaterials(unittest.TestCase):
                 block = next(block for block in blocks if f"replicaCount={count}" in block)
                 self.assertLess(block.index(f"replicaCount={count}"),
                                 block.index("rollout status deployment/hello-oke --timeout=300s"))
-                self.assertLess(block.index("rollout status"), block.index("get pods"))
+                after_scale = manual.split(f"replicaCount={count}", 1)[1]
+                self.assertLess(after_scale.index("rollout status"), after_scale.index("get pods"))
         self.assertIn("before every desired replica is ready", manual)
         self.assertIn("`Terminating`", manual)
 
@@ -280,8 +284,7 @@ class LabMaterials(unittest.TestCase):
         fresh = readme.split("### Fresh-terminal setup errors", 1)[1].split("### ", 1)[0]
         blocks = re.findall(r"```bash\n(.*?)```", fresh, re.S)
         self.assertEqual(len(blocks), 2)
-        for command in ('cd "$HOME/oke-bootcamp"', "source helm/versions.env",
-                        "unset KUBECONFIG", "kubectl config current-context"):
+        for command in ('cd "$HOME/oke-bootcamp"', "source helm/versions.env"):
             self.assertIn(command, blocks[0])
         self.assertIn("APP_IP=$(kubectl -n oke-lab get svc hello-oke", blocks[1])
         self.assertIn("If the app is already deployed", fresh)
