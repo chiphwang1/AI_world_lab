@@ -154,6 +154,7 @@ def main():
     y = page(2, "Core debrief and optional extension notes.")
     y = paragraph("Name: ______________________________    Date: __________________", y)-12
     y = heading("Core debrief", y)
+    y = paragraph(one("Review these three questions"), y, SMALL)-8
     for number, question in enumerate(questions, start=1):
         y = paragraph(question, y)-14
         rule(y)

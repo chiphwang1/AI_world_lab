@@ -22,7 +22,7 @@ If time permits, use the **Horizontal Pod Autoscaler (HPA)** to adjust replicas 
 
 Run commands in a **Bash terminal on the Luna desktop**. Keep session credentials private.
 
-Materials revision: `lab-2026-09-30.5`. Your checkout and Luna instructions must show this same revision.
+Materials revision: `lab-2026-09-30.6`. Your checkout and Luna instructions must show this same revision.
 
 Record your results in the [completion sheet (PDF)](docs/completion-sheet.pdf) or [Markdown version](docs/completion-sheet.md). You can save or print the PDF.
 
@@ -56,7 +56,7 @@ Use each code block's **Copy** button, then **Edit → Paste** in the Luna termi
 In a **Bash terminal** on your Luna desktop, download the lab repository. Keep this window open as **terminal 1**:
 
 ```bash
-git clone --branch lab-2026-09-30.5 --single-branch \
+git clone --branch lab-2026-09-30.6 --single-branch \
   https://github.com/chiphwang1/AI_world_lab.git "$HOME/oke-bootcamp" &&
   cd "$HOME/oke-bootcamp"
 ```
@@ -612,7 +612,20 @@ kubectl -n oke-lab top pods --containers
 
 Expect numeric readings in the CPU and memory columns. If metrics are unavailable, stop here and ask the instructor to check Metrics Server. **The Prometheus used by Kiali and Grafana does not supply this HPA's CPU metrics.**
 
-The HPA chooses the desired pod count from CPU measurements. Enable it first:
+This command **turns on automatic scaling for your existing application**. It creates a Horizontal Pod Autoscaler (HPA), which uses CPU measurements to choose how many application pods should run.
+
+| Command part | What it does |
+|---|---|
+| `helm upgrade hello-oke` | Updates the installed application named `hello-oke`. |
+| `./charts/oke-mesh-app` | Uses the application chart from your lab files. |
+| `--namespace oke-lab` | Updates the application in the `oke-lab` namespace. |
+| `--reuse-values` | Keeps your existing settings, including your custom message and traffic generator. |
+| `--set autoscaling.enabled=true` | Enables the HPA for the application. |
+| `--wait --timeout 10m` | Waits up to ten minutes for Helm's readiness checks. |
+
+**Enabling HPA does not start the CPU load test.** With the normal lightweight traffic, the app should settle at two pods. The cluster still has two worker nodes.
+
+Run the command in terminal 1:
 
 ```bash
 helm upgrade hello-oke ./charts/oke-mesh-app --namespace oke-lab \
@@ -640,7 +653,13 @@ Read the output as follows:
 - The target is 60% of the app's `100m` CPU request, or `60m` per pod. `100m` is one tenth of a CPU.
 - The Istio proxy's CPU is excluded. The app's `250m` limit caps its CPU use.
 
-Metrics Server supplies this HPA's CPU measurements. Grafana displays dashboard metrics and does not control the replica count.
+**How CPU usage changes the pod count**
+
+The HPA scales the application when the average CPU usage of its `web` containers stays above the target. In this lab, each `web` container requests **100m CPU**, so the **60% target means 60m per pod**. The HPA can increase the app from two pods to a maximum of six.
+
+For example, if two app pods each use **120m**, the average is twice the 60m target. The HPA would aim for approximately **four pods** to spread the work. Actual changes depend on available measurements, pod readiness, and scaling settings.
+
+Metrics Server supplies this HPA's CPU measurements. Grafana displays dashboard metrics and does not control the replica count. The HPA responds to app CPU usage, not directly to request count, and it does not add worker nodes.
 
 The first HPA output may show `<unknown>` for CPU while measurements become available. The replica count may also briefly drop below two as Helm hands control to the HPA. Wait 30 seconds, then rerun the two HPA checks above.
 
@@ -650,9 +669,18 @@ Keep the lab's resource settings unchanged. Record the HPA baseline row before e
 
 ### Generate a five-minute CPU load
 
-The `/work` endpoint performs CPU-intensive calculations before responding. Requests to it create CPU demand in the application pods; the HPA uses the resulting CPU measurements to decide whether to add replicas. Heavier requests do not necessarily mean more requests per second, so use app CPU to explain the scaling response.
+The traffic generator has two modes:
 
-The generator sends two concurrent streams to `/work` for five minutes, then returns to low-rate `/` traffic:
+| Mode | Requests it sends | What to expect |
+|---|---|---|
+| **Baseline** (`traffic.loadEnabled=false`) | One lightweight request to `/` about every two seconds. | Provides dashboard traffic; the app normally stays at two pods. |
+| **CPU load** (`traffic.loadEnabled=true`) | Two concurrent streams of requests to `/work` for five minutes. | Raises app CPU usage so the enabled HPA can add pods, up to six. |
+
+The `/work` endpoint performs CPU-intensive calculations before responding. This creates the sequence you will observe: **load mode starts → app CPU rises → HPA requests more app pods**. The traffic generator itself remains a separate Deployment with one desired pod; it does not decide the app's replica count.
+
+Heavier requests do not necessarily mean more requests per second, so use app CPU to explain the scaling response. The earlier validation run observed **2 → 6 → 2 app pods**, but six is a limit, not a required result.
+
+The following command keeps your existing settings and switches the generator to CPU-load mode. HPA must already be enabled. After five minutes, the generator automatically returns to baseline traffic:
 
 ```bash
 helm upgrade hello-oke ./charts/oke-mesh-app --namespace oke-lab \
@@ -757,7 +785,7 @@ Stop watches and dashboard forwards with Ctrl+C; this leaves the releases and ba
 
 ### Final debrief
 
-Use your observations to discuss these three questions with a partner or instructor:
+Review these three questions on your own using your lab observations. You may jot down brief answers in your completion sheet:
 
 1. What changed when you scaled from two to four pods?
 2. How do Kiali and Grafana help you understand the application?

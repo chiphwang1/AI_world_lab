@@ -47,7 +47,7 @@ Six replicas is a limit, not a required peak. The two endpoints do different wor
 
 ## Core debrief
 
-Discuss these three questions at the end of the lab:
+Review these three questions on your own using your lab observations:
 
 1. What changed when you scaled from two to four pods?
 

@@ -48,7 +48,7 @@ In the September 30 Luna rehearsal, the app Service failed with `QuotaExceeded` 
 
 ### One materials revision
 
-Publish the immutable, annotated tag `lab-2026-09-30.5` in both GitLab (Luna's source) and the public GitHub distribution repository before distributing these instructions. Both tags must contain the same reviewed learner materials and pass the checks below. GitLab and GitHub can retain different commit histories and infrastructure files; do not copy unrelated private history merely to make their commit IDs match. A revision printed in the README does not create a release tag; the student's clone command will fail until that tag is published. This is a versioned materials release; the classroom pilot and other release gates below remain required. Keep the learner files on Luna's published GitLab branch identical to this release during a workshop, and make later materials edits on a separate branch. Do not move an existing release tag.
+Publish the immutable, annotated tag `lab-2026-09-30.6` in both GitLab (Luna's source) and the public GitHub distribution repository before distributing these instructions. Both tags must contain the same reviewed learner materials and pass the checks below. GitLab and GitHub can retain different commit histories and infrastructure files; do not copy unrelated private history merely to make their commit IDs match. A revision printed in the README does not create a release tag; the student's clone command will fail until that tag is published. This is a versioned materials release; the classroom pilot and other release gates below remain required. Keep the learner files on Luna's published GitLab branch identical to this release during a workshop, and make later materials edits on a separate branch. Do not move an existing release tag.
 
 Students download a **new** checkout with the pinned clone command at the start of hands-on step 1. After cloning, verify the revision in their checkout:
 
@@ -57,20 +57,20 @@ cd "$HOME/oke-bootcamp"
 git describe --tags --exact-match HEAD
 ```
 
-Expect `lab-2026-09-30.5`. Students skip cloning if that folder exists. Inspect its revision and edits; do not reset, pull over, or delete a learner's work. If it is the wrong revision, prepare a separate directory and supply that path. The GitHub distribution repository is public; its HTTPS clone should not request credentials. Verify unauthenticated access from Luna before class. Do not put credentials in clone URLs or leave an instructor's Git credentials on a shared desktop. An instructor-distributed checkout must retain Git metadata and the release tag for this revision check.
+Expect `lab-2026-09-30.6`. Students skip cloning if that folder exists. Inspect its revision and edits; do not reset, pull over, or delete a learner's work. If it is the wrong revision, prepare a separate directory and supply that path. The GitHub distribution repository is public; its HTTPS clone should not request credentials. Verify unauthenticated access from Luna before class. Do not put credentials in clone URLs or leave an instructor's Git credentials on a shared desktop. An instructor-distributed checkout must retain Git metadata and the release tag for this revision check.
 
 Before publishing or teaching, confirm that both immutable tags exist:
 
 ```bash
-git ls-remote origin 'refs/tags/lab-2026-09-30.5^{}'
-git ls-remote github 'refs/tags/lab-2026-09-30.5^{}'
+git ls-remote origin 'refs/tags/lab-2026-09-30.6^{}'
+git ls-remote github 'refs/tags/lab-2026-09-30.6^{}'
 ```
 
 These remote names apply to the maintainer checkout. Different commit IDs are allowed because the repositories can have different histories. Compare the learner files themselves before distributing a release. With read access to both repositories, fetch their tags into separate local refs so neither overwrites the other:
 
 ```bash
-git fetch origin refs/tags/lab-2026-09-30.5:refs/materials/gitlab
-git fetch github refs/tags/lab-2026-09-30.5:refs/materials/github
+git fetch origin refs/tags/lab-2026-09-30.6:refs/materials/gitlab
+git fetch github refs/tags/lab-2026-09-30.6:refs/materials/github
 git diff --exit-code refs/materials/gitlab refs/materials/github -- \
   README.md charts helm \
   docs/architecture.md docs/images/oke-lab-architecture.png \
@@ -86,7 +86,7 @@ git diff --exit-code refs/materials/gitlab refs/materials/github -- \
 
 The comparison must produce no differences. Stop distribution if a tag is missing or any listed file differs. If command-line access is unavailable, download and compare these specific files from the authenticated GitLab interface and the GitHub release checkout. Do not export unrelated private project data or publish infrastructure changes as part of a learner-materials update.
 
-Verify Luna displays `Materials revision: lab-2026-09-30.5` and that its PDF/PNG links work. Its learner files must match the GitLab tag. Record both resolved commits on the pilot timing sheet. Do not treat the tags themselves as evidence that classroom testing passed.
+Verify Luna displays `Materials revision: lab-2026-09-30.6` and that its PDF/PNG links work. Its learner files must match the GitLab tag. Record both resolved commits on the pilot timing sheet. Do not treat the tags themselves as evidence that classroom testing passed.
 
 A local commit or tag does not update either remote. Review newer work on each remote, publish only the intended materials, and never force-push or move an existing release tag. Complete publication to both repositories and verify the file comparison before distributing the new clone command.
 
@@ -128,7 +128,7 @@ Keep two workers for this tested per-learner workload. Validate allocatable capa
 
 ## Debrief answer guide
 
-Use the [completion sheet](completion-sheet.md) to record successful checks and observed values during the walkthrough. Keep students moving through each action and its expected result; save discussion questions for the final debrief.
+Use the [completion sheet](completion-sheet.md) to record successful checks and observed values during the walkthrough. Keep students moving through each action and its expected result; save the three reflection questions for the final debrief. Students review them individually using their own observations.
 
 Use only these three questions for the core debrief:
 
@@ -144,7 +144,7 @@ HPA and recovery remain optional. For an HPA attempt, verify numeric CPU metrics
 
 Measure the revised schedule in a beginner pilot; simpler instructions alone do not prove the hour is achievable.
 
-Core completion requires the customized public response, mesh traffic, baseline dashboard readings, manual 2→4→2 scaling observations with unchanged workers and Service IP, and the core debrief. No HPA resource, load burst, or automatic scale-in is required. Missing core evidence needs follow-up, not a checked box. Record HPA and recovery separately as skipped, completed, or blocked; any attempted burst must still be reset. A partner discussion can assess explanations without another quiz.
+Core completion requires the customized public response, mesh traffic, baseline dashboard readings, manual 2→4→2 scaling observations with unchanged workers and Service IP, and the core debrief. No HPA resource, load burst, or automatic scale-in is required. Missing core evidence needs follow-up, not a checked box. Record HPA and recovery separately as skipped, completed, or blocked; any attempted burst must still be reset. The final debrief is an individual reflection. Students may write brief answers in their completion sheet; discussion with a partner or instructor is not required.
 
 ## Classroom pilot and release gates
 
@@ -185,7 +185,7 @@ The [September 18 rehearsal](rehearsal-2026-09-18.md), [September 21 reset/reins
 
 The preflight compatibility check follows the pinned Istio 1.31.x range, Kubernetes 1.32–1.36, and kubectl's one-minor-version skew rule. Review the script and its tests whenever changing these pins. Sources: [Istio supported releases](https://istio.io/latest/docs/releases/supported-releases/) and [kubectl version skew policy](https://kubernetes.io/releases/version-skew-policy/#kubectl).
 
-The public GitHub distribution and GitLab source must publish the same immutable materials tag, `lab-2026-09-30.5`, with matching learner files. Keep unrelated infrastructure and repository history on their existing remotes. Publish both explicitly, without force-pushing, and verify the file comparison described above. Use GitLab's `ci.skip` push option for documentation/materials publication so it does not launch infrastructure jobs; required security scans remain a separate release gate. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
+The public GitHub distribution and GitLab source must publish the same immutable materials tag, `lab-2026-09-30.6`, with matching learner files. Keep unrelated infrastructure and repository history on their existing remotes. Publish both explicitly, without force-pushing, and verify the file comparison described above. Use GitLab's `ci.skip` push option for documentation/materials publication so it does not launch infrastructure jobs; required security scans remain a separate release gate. Follow [packaging notes](../helm/README.md#github-distribution); exclude credentials, local configuration, Terraform state/plans, and operational logs. Keep the diagram in one file so the lecture and README cannot drift apart.
 
 `terraform/` and CI scripts are instructor-managed; `charts/` and `helm/` contain learner deployment materials. Do not mix the legacy `kubernetes/` manifests into the Helm student workflow. See [CI administration](gitlab-ci.md), [local Terraform workflow](maintainer-infrastructure.md), and [cleanup](cleanup.md).
 
